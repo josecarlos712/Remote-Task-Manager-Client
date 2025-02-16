@@ -1,0 +1,113 @@
+openapi: 3.0.0
+info:
+  title: Remote Task API
+  version: 1.0.0
+  description: API for managing remote tasks and commands
+
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+
+paths:
+  /api/test:
+    get:
+      summary: Test API
+      description: Check if the API is running
+      responses:
+        "200":
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: APIRest is running
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: Point A
+                      port:
+                        type: integer
+                        example: 5000
+    options:
+      summary: Handle CORS preflight request
+      responses:
+        "204":
+          description: No content
+
+  /api/command:
+    post:
+      summary: Execute a command
+      description: Executes a predefined command on the remote server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command:
+                  type: string
+                  example: restart_service
+                message:
+                  type: string
+                  example: Restarting service now
+      responses:
+        "200":
+          description: Command executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Command executed
+        "400":
+          description: Bad request - Missing command
+        "404":
+          description: Command not found
+        "500":
+          description: Internal server error
+
+  /api/health:
+    get:
+      summary: Health Check
+      description: Check the system health status
+      responses:
+        "200":
+          description: Health check successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Health check successful
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: Point A
+                      status:
+                        type: string
+                        example: healthy
+                      last_health_check:
+                        type: string
+                        format: date-time
+                        example: "2025-01-23T19:11:44.363Z"
