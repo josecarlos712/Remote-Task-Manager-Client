@@ -1,12 +1,20 @@
+import logging
 import os
+import re
+
 import config
 
 
-class Config:
+class Configuration:
     def __init__(self, config_path='configuration.ini'):
         self.config_path = config_path
         self.settings = {}
+        self.start()
+
+    # This function is executed on the start of the server to check if everything is okay.
+    def start(self):
         self.load_config()
+        self.check_files()
 
     def load_config(self):
         """Loads the configuration file and parses key-value pairs."""
@@ -33,3 +41,14 @@ class Config:
     def get(self, key, default=None):
         """Retrieves a configuration value with an optional default."""
         return self.settings.get(key, default)
+
+    def check_files(self):
+        """Check for important directories and files inside the proyect."""
+        #Checking downloads
+        is_absolute_path = bool(re.match(r"^[A-Za-z]:[\\/]", self.settings.get("PATH_DOWNLOADS")))
+        downloads_folder = os.path.join(os.getcwd(), "downloads") if is_absolute_path else self.settings.get("PATH_DOWNLOADS")
+        try:
+            os.makedirs(downloads_folder, exist_ok=True)
+        except Exception as e:
+            logging.log(config.LogLevel.ERROR.value, f"CheckFiles ERROR: Exception on os.makedirs - {e}")
+        logging.log(config.LogLevel.DEBUG.value, "CheckFiles OK")

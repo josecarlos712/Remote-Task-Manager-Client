@@ -1,4 +1,5 @@
 from remote_client import RemoteClient
+import config
 
 
 # Usage example for Point A

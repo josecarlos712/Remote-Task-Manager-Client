@@ -13,11 +13,12 @@ import multiprocessing
 import logging
 from functools import wraps
 
-import commands
 import config
-from commands import Command
+from commands import Command, test_command, show_popup, CommandsFunctions
 from config import logger, CONFIG_PATH, VALID_TOKENS
-from utils import error_handler, APIResponse
+from utils import APIResponse
+from utils.APIResponse import ErrorResponse, error_handler
+from utils.endpoints_loader import  load_endpoints
 
 
 class RemoteClient:
@@ -53,7 +54,7 @@ class RemoteClient:
         self._register_routes()
         self._initialize_commands()  # Add the existing commands to the Commands class dictionary
 
-        # IMPROVEMENT: Added health check system
+        # Health check system
         self.last_health_check = None
         self._start_health_check()
 
@@ -78,6 +79,9 @@ class RemoteClient:
                 methods=methods
             )
 
+        # Load dynamic routes
+        load_endpoints(self.app)
+
     def _initialize_commands(self):
         """
         IMPROVEMENT: Added error handling for command initialization
@@ -85,10 +89,12 @@ class RemoteClient:
         _commands: Dict = {}
         try:
             # Declare the commands (these commands are built-in)
-            _commands['popup'] = Command(command='popup', function=commands.show_popup,
-                                         description="This is an example API function.")
-            _commands['test_command'] = Command(command='test_command', function=commands.test_command,
+            _commands['popup'] = Command(command='popup', function=CommandsFunctions.PopUp,
+                                         description="This is an example API function.", needs_message=True)
+            _commands['test_command'] = Command(command='test_command', function=CommandsFunctions.TestFunction,
                                                 description="Command for testing")
+            _commands['execute_program'] = Command(command='execute_program', function=CommandsFunctions.ExecuteProgram, needs_message=True,
+                                                   description="Run a .exe or .bat")
             logger.info("Commands initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize commands: {e}")
@@ -178,52 +184,57 @@ class RemoteClient:
             # Flask-CORS should handle this, but you can explicitly return a response if needed
             return '', 204
         return jsonify(
-            APIResponse(" ", "APIRest is running",
-                        {"name": self.name, "port": self.port}).to_dict()
+            APIResponse.SuccessResponse("APIRest is running",
+                                        {"name": self.name, "port": self.port}).to_dict()
         ), 200
 
     def command_endpoint(self):
         """
+        Endpoint to execute a command.
+
         IMPROVEMENTS:
-        - Better input validation
-        - More detailed error messages
-        - Proper error handling
-        - Standardized response format
+        - Structured error handling with appropriate log levels.
+        - Clearer response messages.
+        - Separation of concerns: JSON validation and command execution are separate functions.
         """
         json_data = request.get_json()
 
+        # Validate that JSON data exists and contains 'command'
         if not json_data or 'command' not in json_data:
-            return jsonify(
-                APIResponse("error", "Command not provided").to_dict()
-            ), 400
+            logging.log(config.LogLevel.ERROR.value, "CommandEndpoint: Missing 'command' in request.")
+            return jsonify(ErrorResponse("Command not provided", config.LogLevel.ERROR).to_dict()), 400
 
         command_name = json_data['command']
+
+        # Validate that command exists
         if command_name not in self.commands:
+            logging.log(config.LogLevel.ERROR.value, f"CommandEndpoint: Command '{command_name}' does not exist.")
             return jsonify(
-                APIResponse("error", f"Command '{command_name}' does not exist").to_dict()
-            ), 404
+                ErrorResponse(f"Command '{command_name}' does not exist", config.LogLevel.ERROR).to_dict()), 404
+
+        command = self.commands.get(command_name)
+
+        message = json_data.get('message')
+        if command.needs_message() and not message:
+            logging.log(config.LogLevel.ERROR.value, f"CommandEndpoint: Command '{command_name}' needs a message.")
+            return jsonify(
+                ErrorResponse(f"Command '{command_name}' needs a message.", config.LogLevel.ERROR).to_dict()), 400
 
         try:
-            command_instance = self.commands[command_name]
-            message = json_data.get('message')
-
-            if message:
-                response = command_instance.execute(message=message)
-            else:
-                response = command_instance.execute()
-
-            return response
+            return command.execute(message)
         except Exception as e:
-            logger.error(f"Command execution failed: {e}")
-            return jsonify(
-                APIResponse("error", f"Command execution failed: {str(e)}").to_dict()
-            ), 500
+            logging.log(config.LogLevel.ERROR.value,
+                        f"CommandEndpoint: Execution failed for command '{command_name}': {e}")
+            return jsonify(ErrorResponse(f"Command execution failed: {str(e)}", config.LogLevel.ERROR).to_dict()), 500
 
     # IMPROVEMENT: Added health check endpoint
     def health_check_endpoint(self):
         """Endpoint for system health monitoring"""
+        # This endpoint checks the all the PC instant values (those which can be obtained inmediately) and refresh the internal variables
+        # To refresh more demanding stattus, you need to specifically request a refresh
+        # TODO health check function
         return jsonify(
-            APIResponse("success", "Health check successful", {
+            APIResponse.SystemInfoResponse(message="Health check successful", system_data={
                 "name": self.name,
                 "status": "healthy",
                 "last_health_check": self.last_health_check
@@ -238,10 +249,11 @@ class RemoteClient:
     # @app.route('/api/processes', methods=['GET'])
     def list_processes(self):
         """ Get a list of all running processes """
-        processes = []
+        processes: list[psutil.Process] = []
         for proc in psutil.process_iter(['pid', 'name', 'status']):
             processes.append(proc.info)
-        return jsonify(APIResponse("success", processes).to_dict()), 200
+        return jsonify(APIResponse.ProcessResponse(message="List of current processes on {self.name}",
+                                                   processes=processes).to_dict()), 200
 
     # @app.route('/api/processes/<int:process_id>', methods=['GET'])
     def get_process_status(self, process_id):
@@ -249,9 +261,10 @@ class RemoteClient:
         try:
             process = psutil.Process(process_id)
             # TODO Cambiar el tipo de dato del segundo parametro de APIResponse a any y manejarlo en la recepcion del JSON
-            return jsonify(APIResponse('success', process.as_dict(attrs=['pid', 'name', 'status']).__str__()).to_dict()), 200
+            return jsonify(
+                APIResponse.SystemInfoResponse(process.as_dict(attrs=['pid', 'name', 'status'])).to_dict()), 200
         except psutil.NoSuchProcess:
-            return jsonify(APIResponse('error', 'Process not found').to_dict()), 404
+            return jsonify(APIResponse.ErrorResponse('error', 'Process not found').to_dict()), 404
 
     # @app.route('/api/processes/kill', methods=['POST'])
     def kill_process(self):

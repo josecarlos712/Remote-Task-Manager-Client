@@ -1,0 +1,59 @@
+import tkinter as tk
+from tkinter import scrolledtext
+import requests
+import json
+
+def send_request():
+    command = command_entry.get()
+    message = message_entry.get()
+    port = port_entry.get()
+    
+    # Clear previous response
+    response_text.delete(1.0, tk.END)
+    
+    if not port:
+        response_text.insert(tk.END, "Error: El campo 'port' es obligatorio.")
+        return
+    if not command:
+        response_text.insert(tk.END, "Error: El campo 'command' es obligatorio.")
+        return
+    
+    url = f"http://localhost:{port}/api/command"
+    payload = {"command": command, "message": message}
+    
+    try:
+        response = requests.post(url, json=payload)
+        response_data = response.json()
+        formatted_response = json.dumps(response_data, indent=4)
+        response_text.insert(tk.END, formatted_response)
+    except requests.exceptions.RequestException as e:
+        response_text.insert(tk.END, f"Error en la solicitud: {e}")
+
+# Configuración de la ventana
+root = tk.Tk()
+root.title("JSON Request Sender")
+root.geometry("400x500")  # Made window taller to accommodate response box
+
+# Input fields
+tk.Label(root, text="Port:").pack(pady=5)
+port_entry = tk.Entry(root)
+port_entry.pack()
+port_entry.insert(0, "5000")
+
+tk.Label(root, text="Command:").pack(pady=5)
+command_entry = tk.Entry(root)
+command_entry.pack()
+
+tk.Label(root, text="Message:").pack(pady=5)
+message_entry = tk.Entry(root)
+message_entry.pack()
+
+# Send button
+tk.Button(root, text="Send Request", command=send_request).pack(pady=10)
+
+# Response text area
+tk.Label(root, text="Server Response:").pack(pady=5)
+response_text = scrolledtext.ScrolledText(root, height=15, width=45)
+response_text.pack(pady=5, padx=10)
+
+root.mainloop()
