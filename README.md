@@ -1,4 +1,14 @@
-16-02-25 Pre API Functions
+16-02-25 Modular API Functions v 0.1.1
+
+Here we set the start of the version counting.
+v1.x.x - when both server and client works
+v0.1.x - for client developing
+v0.2.x - for server developing
+v0.3.x - for comunication, requirements and edge cases developing
+
+v0.1.1 - Modular API (not fully implemented)
+
+Different versions of client and server should work together since the mayor version number still the same (e.g 1.1.3 and 1.2.3 should work together)
 
 Este commit es anterior a cambiar el parametro de dato de la API cliente para hacerlo genérico.
 Debo añadir checks en la recepcion de datos para comprobar:
@@ -30,3 +40,6 @@ Also add another command to kill the process, and list the current processes.
 
 26-02-25 Dynamic endpoints
 There is a blueprint for dynamic endpoints. The system import the dynamic endpoints on the server start.
+
+03-03-23 Endpoint loader and more endpoints
+A dynamic endpoints loader added and more dynamic endpoints were added.

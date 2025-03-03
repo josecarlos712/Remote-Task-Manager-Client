@@ -21,8 +21,10 @@ def load_endpoints(app):
                 # Call the register function (if it exists)
                 if hasattr(module, 'register'):
                     try:
-                        module.register(app, module_name)
-                        loaded_modules[module_name] = True
+                        if module.register(app, module_name) == 0:
+                            loaded_modules[module_name] = True
+                        else:
+                            raise ImportError(f"Failed to import module {module_name}.")
                     except Exception as e:
                         logger.warn(f"Failed on \'register()\' function. - {e}")
             except Exception as e:
