@@ -1,9 +1,13 @@
-16-02-25 Modular API Functions v 0.1.1
+### 16-02-25 Modular API Functions v 0.1.1
 
 Here we set the start of the version counting.
+
 v1.x.x - when both server and client works
+
 v0.1.x - for client developing
+
 v0.2.x - for server developing
+
 v0.3.x - for comunication, requirements and edge cases developing
 
 v0.1.1 - Modular API (not fully implemented)
@@ -19,11 +23,12 @@ Tras adaptar la function de envio y recepcion de datos a una mas generica.
  - Crear tests para las nuevas funciones de la API.
  - Añadir los endpoint necesarios para cubir las nuevas funciones.
 
-16-02-25 APIResponse and Log
+### 16-02-25 APIResponse and Log
 
 There is a new APIResponse class. API response sub classes now inherit from the super APIResponse to keep it tidy 
 and organized in the different posible API cases. I will be adding new ones in the future when necessary.
 Current APIResponse classes and inheritances:
+
     SuccessResponse(APIResponse)
     ProcessResponse(SuccessResponse)
     ProgramResponse(SuccessResponse)
@@ -38,13 +43,17 @@ PopUp and test endpoint works.
 Writing the execute program endpoint. It needs an "execute" function that executes the Command class when called.
 Also add another command to kill the process, and list the current processes.
 
-26-02-25 Dynamic endpoints
+### 26-02-25 Dynamic endpoints
+
 There is a blueprint for dynamic endpoints. The system import the dynamic endpoints on the server start.
 
-03-03-25 Endpoint loader and more endpoints
+### 03-03-25 Endpoint loader and more endpoints
+
 A dynamic endpoints loader added and more dynamic endpoints were added.
 
-06-03-25 Adding endpoints
+### 06-03-25 Adding endpoints
 Added system informationg gathering on the configuration file and a get function to access the information.
-TODO Add built-in endpoints as dynamic endpoints.
-TODO Add the command shutdown, download from url, get screenshot, start program.
+
+*TODO* Add built-in endpoints as dynamic endpoints.
+
+*TODO* Add the command shutdown, download from url, get screenshot, start program.
