@@ -16,19 +16,8 @@ class LogLevel(Enum):
     NOTSET = 0
 
 
-log_file = "system.log"
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        # Creates a new log file every day and keeps 7 days
-        TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8")
-    ]
-)
-
-logger = logging.getLogger(__name__)
-configuration = Configuration()
+configuration = Configuration() #Init for Configuration
+logger = configuration.logger #Make the logger global
 
 # Other
 CONFIG_PATH = 'config/programs.json'

@@ -7,7 +7,7 @@ from flask import jsonify
 from datetime import datetime
 
 
-def register(app, path):
+def register(app, path) -> int:
     methods = ['GET']
 
     app.add_url_rule(
@@ -16,6 +16,8 @@ def register(app, path):
         view_func=error_handler(handler),  # Added error handling
         methods=methods
     )
+
+    return 0
 
 
 def handler() -> APIResponse:

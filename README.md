@@ -41,5 +41,10 @@ Also add another command to kill the process, and list the current processes.
 26-02-25 Dynamic endpoints
 There is a blueprint for dynamic endpoints. The system import the dynamic endpoints on the server start.
 
-03-03-23 Endpoint loader and more endpoints
+03-03-25 Endpoint loader and more endpoints
 A dynamic endpoints loader added and more dynamic endpoints were added.
+
+06-03-25 Adding endpoints
+Added system informationg gathering on the configuration file and a get function to access the information.
+TODO Add built-in endpoints as dynamic endpoints.
+TODO Add the command shutdown, download from url, get screenshot, start program.
