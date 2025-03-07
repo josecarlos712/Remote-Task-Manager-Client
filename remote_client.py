@@ -66,7 +66,6 @@ class RemoteClient:
         # New routes like '/api/endpoint' are defined as:
         #    'endpoint': (self.function_endpoint, ["POST", "GET"])
         routes = {
-            'test': (self.test_endpoint, ["GET"]),
             'command': (self.command_endpoint, ["POST"]),
             'health': (self.health_check_endpoint, ["GET"]),
         }
@@ -174,20 +173,6 @@ class RemoteClient:
 
     # ------------------------------------------------ ENDPOINT FUNCTIONS -------------------------------------------------
     # IMPROVEMENT: Enhanced API endpoints with better responses and error handling
-    def test_endpoint(self):
-        """
-        IMPROVEMENTS:
-        - Added more detailed response
-        - Using standardized response format
-        """
-        if request.method == 'OPTIONS':
-            # Flask-CORS should handle this, but you can explicitly return a response if needed
-            return '', 204
-        return jsonify(
-            APIResponse.SuccessResponse("APIRest is running",
-                                        {"name": self.name, "port": self.port}).to_dict()
-        ), 200
-
     def command_endpoint(self):
         """
         Endpoint to execute a command.

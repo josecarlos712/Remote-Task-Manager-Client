@@ -17,7 +17,7 @@ class LogLevel(Enum):
 
 
 configuration = Configuration() #Init for Configuration
-logger = configuration.logger #Make the logger global
+logger = configuration.logging #Make the logger global by creating a static variable
 
 # Other
 CONFIG_PATH = 'config/programs.json'

@@ -24,6 +24,7 @@ def handler() -> APIResponse:
     if request.method == 'OPTIONS':
         # Flask-CORS should handle this, but you can explicitly return a response if needed
         return '', 204
+
     return jsonify(
         APIResponse.SuccessResponse("APIRest is running",
                                     {"name": self.name, "port": self.port}).to_dict()

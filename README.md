@@ -54,6 +54,9 @@ A dynamic endpoints loader added and more dynamic endpoints were added.
 ### 06-03-25 Adding endpoints
 Added system informationg gathering on the configuration file and a get function to access the information.
 
+### 07-03-25 Adding endpoints
+System information gathering function checked and working.
+
 *TODO* Add built-in endpoints as dynamic endpoints.
 
-*TODO* Add the command shutdown, download from url, get screenshot, start program.
+*TODO* Add the command shutdown, download from url, get screenshot, start program, get system information.

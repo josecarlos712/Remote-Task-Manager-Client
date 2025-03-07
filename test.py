@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch, MagicMock
 from flask import Flask, jsonify
 import requests
 
+import config
 from commands import Command
 from utils import APIResponse
 from remote_client import RemoteClient
@@ -120,6 +121,10 @@ class TestRemoteClientEndpoints:
         response = client.get('/api/test')
         # Manejo correcto de errores 500 (error interno en el servidor)
         assert response.status_code == 500
+
+    def test_system_info_gathering(self):
+        info = config.configuration.get_specification_info(key_path="cpu")
+        assert info != "Unknown"
 
 
 def test_cors_headers(client):

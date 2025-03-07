@@ -3,35 +3,22 @@ import os
 import re
 from logging.handlers import TimedRotatingFileHandler
 
-import config
-
 
 class Configuration:
     def __init__(self, config_path='configuration.ini'):
-        self.specifications = None
-        self.logger = None
+        self.system_info = None
+        self.logging = None
         self.config_path = config_path
         self.settings = {}
         self.start()
 
     # This function is executed on the start of the server to check if everything is okay.
     def start(self):
-        self.load_specifications()
         self.logging_configuration()
+        #There can't be any logging until the logging initialization
+        self.load_specifications()
         self.load_config()
         self.check_files()
-
-    def load_config(self):
-        """Loads the configuration file and parses key-value pairs."""
-        if not os.path.exists(self.config_path):
-            raise FileNotFoundError(f"Configuration file '{self.config_path}' not found.")
-
-        with open(self.config_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):  # Ignore empty lines and comments
-                    key, value = map(str.strip, line.split("=", 1))
-                    self.settings[key] = self.parse_value(value)
 
     def logging_configuration(self) -> logging:
         log_file = "logs/system.log"
@@ -44,13 +31,13 @@ class Configuration:
                 TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8")
             ]
         )
-        self.logger = logging.getLogger(__name__)
+        self.logging: logging = logging.getLogger(__name__)
 
-        return self.logger
+        return self.logging
 
     def load_specifications(self):
         # In the specifications file there is a list of static values of the client (name, local ip, etc)
-        self.specifications = None
+        self.system_info = None
 
         import os
         import socket
@@ -61,7 +48,8 @@ class Configuration:
         import requests
         import subprocess
 
-        def get_system_info():
+        def get_system_info() -> dict:
+            """Gather all the info from the guest computer and store it on system_info.json"""
             try:
                 # Basic System Info
                 system_info = {
@@ -77,21 +65,31 @@ class Configuration:
                 }
 
                 # Hardware Info
+                output = subprocess.check_output(
+                    "wmic cpu get name", shell=True
+                ).decode().strip().split("\n")[1:]  # Ignore the header row
+                cpu_name = output[0].strip() if output else "Unknown"
+
                 system_info.update({
-                    "cpu": platform.processor(),
+                    "cpu": cpu_name,
                     "cpu_cores": os.cpu_count(),
-                    "ram_size_gb": psutil.virtual_memory().total // (1024 ** 3),
+                    "ram_size_mb": psutil.virtual_memory().total // (1024 ** 2),
                     "disk_size_gb": psutil.disk_usage('/').total // (1024 ** 3)
                 })
 
                 # GPU Info (Windows)
                 if platform.system() == "Windows":
                     try:
-                        gpu_info = subprocess.check_output("wmic path win32_videocontroller get caption",
-                                                           shell=True).decode().strip().split("\n")[1].strip()
+                        output = subprocess.check_output(
+                            "wmic path win32_videocontroller get caption", shell=True
+                        ).decode().strip().split("\n")[1:]  # Ignore the header row
+
+                        # Clean up output and filter empty/virtual entries
+                        gpus = [gpu.strip() for gpu in output if gpu.strip() and "virtual" not in gpu.lower()]
+
+                        system_info["gpu"] = gpus[0] if gpus else "Unknown"  # Return the first valid GPU found
                     except Exception:
-                        gpu_info = "Unknown"
-                    system_info["gpu"] = gpu_info
+                        system_info["gpu"] = "Unknown"
 
                 # Public IP
                 try:
@@ -130,13 +128,28 @@ class Configuration:
             except Exception as e:
                 return {"error": f"Failed to gather system info: {str(e)}"}
 
-        def save_system_info(filename="system_info.json"):
+        def save_system_info(filename="system_info.json") -> dict:
             info = get_system_info()
             with open(filename, "w", encoding="utf-8") as file:
                 json.dump(info, file, indent=4)
+            return info
 
         # Run the function to save the info
-        save_system_info()
+        self.system_info = save_system_info()
+        return self.system_info
+
+    def load_config(self):
+        """Loads the configuration file and parses key-value pairs."""
+        if not os.path.exists(self.config_path):
+            self.load_specifications()
+            self.logging.log(logging.DEBUG, f"No system_infor.json file. Created one.")
+
+        with open(self.config_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):  # Ignore empty lines and comments
+                    key, value = map(str.strip, line.split("=", 1))
+                    self.settings[key] = self.parse_value(value)
 
     def parse_value(self, value):
         """Converts string values to appropriate data types."""
@@ -152,12 +165,12 @@ class Configuration:
         """Retrieves a configuration value given the key."""
         return self.settings.get(key, default)
 
-    def get_info(self, key_path):
+    def get_specification_info(self, key_path):
         """This is a get function for the computer speficications.
 
         This get function uses a nested key path with the format 'key.subkey.subsubkey'"""
         keys = key_path.split(".")  # Support dot notation for nested keys
-        value = self.specifications
+        value = self.system_info
 
         for key in keys:
             if isinstance(value, dict) and key in value:
@@ -175,5 +188,5 @@ class Configuration:
         try:
             os.makedirs(downloads_folder, exist_ok=True)
         except Exception as e:
-            logging.log(config.LogLevel.ERROR.value, f"CheckFiles ERROR: Exception on os.makedirs - {e}")
-        logging.log(config.LogLevel.DEBUG.value, "CheckFiles OK")
+            self.logging.log(logging.ERROR, f"CheckFiles ERROR: Exception on os.makedirs - {e}")
+        self.logging.log(logging.DEBUG, "CheckFiles OK")
