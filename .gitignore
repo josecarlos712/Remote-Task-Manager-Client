@@ -13,6 +13,7 @@ __pycache__/
 .pytest_cache/
 
 # Logs and environment files
+logs/
 *.log.*
 *.log
 .env

@@ -9,11 +9,19 @@ import threading
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 ENDPOINTS_FOLDER = os.path.join(ROOT_DIR, "endpoints")
 endpoints = []
-get_endpoints = {"get_time"}  # Lista de endpoints GET conocidos
+post_endpoints = {"show_message_window"}  # Lista de endpoints GET conocidos
 
 if os.path.isdir(ENDPOINTS_FOLDER):
-    endpoints = [f[:-3] for f in os.listdir(ENDPOINTS_FOLDER) if f.endswith(".py") and f[:-3] not in ["blueprint_endpoint", "__init__"]]
-
+    excluded_simple_endpoints = ["blueprint_endpoint", "__init__"]
+    excluded_complex_enpoints = ["__pycache__"]
+    print(os.listdir(ENDPOINTS_FOLDER))
+    endpoints = [
+        f[:-3] for f in os.listdir(ENDPOINTS_FOLDER)
+        if f.endswith(".py") and f[:-3] not in excluded_simple_endpoints
+    ] + [
+        f for f in os.listdir(ENDPOINTS_FOLDER)
+        if os.path.isdir(os.path.join(ENDPOINTS_FOLDER, f)) and os.path.exists(os.path.join(ENDPOINTS_FOLDER, f, "endpoint.py")) and f not in excluded_complex_enpoints
+    ]
 # Función para enviar la solicitud en un hilo separado
 def send_request():
     threading.Thread(target=send_request_thread, daemon=True).start()
@@ -36,11 +44,11 @@ def send_request_thread():
     
     url = f"http://localhost:{port}/api/{selected_endpoint}"
     try:
-        if selected_endpoint in get_endpoints:
-            response = requests.get(url)
-        else:
+        if selected_endpoint in post_endpoints:
             payload = {"message": message}
             response = requests.post(url, json=payload)
+        else:
+            response = requests.get(url)
         
         response_data = response.json()
         formatted_response = json.dumps(response_data, indent=4)

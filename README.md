@@ -56,6 +56,8 @@ Added system informationg gathering on the configuration file and a get function
 
 ### 07-03-25 Adding endpoints
 System information gathering function checked and working.
+Added distintion between simple and complex endpoints.
+Load and access by __getitem__ function to system_info and configuration.
 
 *TODO* Add built-in endpoints as dynamic endpoints.
 
