@@ -59,6 +59,12 @@ System information gathering function checked and working.
 Added distintion between simple and complex endpoints.
 Load and access by __getitem__ function to system_info and configuration.
 
+### 20-03-25 Recursive endpoint loader
+Remake of the endpoint loader to be recursive and load all the endpoints in the folder 'api'.
+The endpoint blueprint changed to the new methodology.
+Added auth endpoint to the api (login and logout).
+Changed the API Request Tester to use the 'api/tree' endpoint to get all the endpoints.
+
 *TODO* Add built-in endpoints as dynamic endpoints.
 
 *TODO* Add the command shutdown, download from url, get screenshot, start program, get system information.
