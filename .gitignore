@@ -17,3 +17,6 @@ logs/
 *.log.*
 *.log
 .env
+
+# Sensible information
+sensible_info/

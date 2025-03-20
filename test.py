@@ -24,7 +24,7 @@ def client():
 
 
 class TestRemoteClientEndpoints:
-    """Test class for RemoteClient endpoints"""
+    """Test class for RemoteClient api"""
 
     def test_test_endpoint(self, client):
         """Test the test endpoint"""

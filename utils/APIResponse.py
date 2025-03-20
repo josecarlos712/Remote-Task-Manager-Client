@@ -79,9 +79,9 @@ class LogResponse(SuccessResponse):
 class ErrorResponse(APIResponse):
     """Base class for all error responses."""
 
-    def __init__(self, message: str, log_level: LogLevel):
+    def __init__(self, message: str):
         # Log error response with severity level
-        logging.log(log_level.value, f"ErrorResponse: {message}")
+        logging.log(LogLevel.ERROR.value, f"ErrorResponse: {message}")
         super().__init__("error", message)
 
 
@@ -91,7 +91,7 @@ class NotFoundResponse(ErrorResponse):
     def __init__(self, resource: str):
         # Log missing resource
         logging.log(LogLevel.WARNING.value, f"NotFoundResponse: {resource} not found.")
-        super().__init__(f"{resource} not found", LogLevel.WARNING)
+        super().__init__(f"{resource} not found")
 
 
 class ValidationErrorResponse(ErrorResponse):
@@ -100,7 +100,7 @@ class ValidationErrorResponse(ErrorResponse):
     def __init__(self, field: str):
         # Log missing or invalid field
         logging.log(LogLevel.WARNING.value, f"ValidationErrorResponse: Missing or invalid field: {field}")
-        super().__init__(f"Missing or invalid field: {field}", LogLevel.WARNING)
+        super().__init__(f"Missing or invalid field: {field}")
 
 
 class InternalErrorResponse(ErrorResponse):
@@ -109,13 +109,13 @@ class InternalErrorResponse(ErrorResponse):
     def __init__(self, error: str):
         # Log internal server error
         logging.log(LogLevel.ERROR.value, f"InternalErrorResponse: {error}")
-        super().__init__(f"Internal server error: {error}", LogLevel.ERROR)
+        super().__init__(f"Internal server error: {error}")
 
 
 # IMPROVEMENT: Added error handling decorator
 def error_handler(f):
     """
-    Decorator that wraps API endpoints with standardized error handling.
+    Decorator that wraps API api with standardized error handling.
     Catches exceptions and returns appropriate error responses.
     """
 
@@ -126,7 +126,7 @@ def error_handler(f):
         except Exception as e:
             logger.error(LogLevel.ERROR.value, f"Error in {f.__name__}: {str(e)}", exc_info=True)
             return jsonify(
-                ErrorResponse(f"Internal server error: {str(e)}", log_level=LogLevel.ERROR).to_dict()
+                ErrorResponse(f"Internal server error: {str(e)}").to_dict()
             ), 500
 
     return wrapper

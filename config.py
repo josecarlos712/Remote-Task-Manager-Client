@@ -19,6 +19,10 @@ class LogLevel(Enum):
 configuration = Configuration() #Init for Configuration
 logger = configuration.logging #Make the logger global by creating a static variable
 
+# Logging configuration
+login_tokens = {}  # Store valid tokens
+
+
 # Other
 CONFIG_PATH = 'config/programs.json'
 VALID_TOKENS = []

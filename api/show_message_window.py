@@ -9,7 +9,7 @@ def register(app, path) -> int:
     methods = ['POST']
 
     app.add_url_rule(
-        f'/api/{path}',
+        f'/{path}',
         endpoint=path,
         view_func=error_handler(handler),  # Added error handling
         methods=methods

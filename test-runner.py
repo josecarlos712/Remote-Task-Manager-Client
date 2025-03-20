@@ -6,7 +6,7 @@ import sys
 def main():
     """
     Run all tests and print a summary of what was tested.
-    This helps ensure all endpoints are being tested.
+    This helps ensure all api are being tested.
     """
     # Print test plan
     print("Remote Client Test Suite")
