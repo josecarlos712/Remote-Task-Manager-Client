@@ -5,7 +5,8 @@ from logging.handlers import TimedRotatingFileHandler
 
 
 class Configuration:
-    def __init__(self, config_path='configuration.ini'):
+    def __init__(self, config_path='config/'
+                                   'configuration.ini'):
         self._system_info = {}
         self.logging = None
         self.config_path = config_path
@@ -187,13 +188,15 @@ class Configuration:
         """Check for important directories and files inside the proyect."""
         #Checking downloads
         is_absolute_path = bool(re.match(r"^[A-Za-z]:[\\/]", self._settings.get("path_downloads")))
-        downloads_folder = os.path.join(os.getcwd(), "downloads") if is_absolute_path else self._settings.get("path_downloads")
+        downloads_folder = os.path.join(os.getcwd(),
+                                        "../downloads") if is_absolute_path else self._settings.get("path_downloads")
         try:
             os.makedirs(downloads_folder, exist_ok=True)
         except Exception as e:
             self.logging.log(logging.ERROR, f"CheckFiles ERROR: Exception on os.makedirs - {e}")
         self.logging.log(logging.DEBUG, "CheckFiles OK")
 
+    # To get an specific value from the configuration file or the system info
     def __getitem__(self, key, default = None):
         """Retrieves a configuration value given the key."""
         if key in self._settings:

@@ -17,7 +17,7 @@ def register(app, path) -> int:
         methods=methods
     )
 
-    return 0
+    return "API endpoint registered successfully", 200
 
 
 def handler() -> APIResponse:

@@ -1,0 +1,11 @@
+
+# Client API
+ - get_commands () 'api/commands/list' (get request)
+ - get_command (command_id: int) 'api/commands/get/<command_id:int>' (get request)
+ - get_programs () 'api/programs/list' (get request)
+ - get_status () 'api/status' (get request)
+ - get_program_status (program_id: int) 'api/programs/status' (receives program_id in json body)
+
+ - execute_command(command_id: int, API_key: str) 'api/commands/execute' (receives command_id and API_key in json body)
+ - execute_program(program_id: int, API_key: str) 'api/programs/execute' (receives program_id and API_key in json body)
+ - stop_program(program_id: int, API_key: str) 'api/programs/stop' (receives program_id and API_key in json body)

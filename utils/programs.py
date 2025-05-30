@@ -1,22 +1,18 @@
 import logging
 import threading
-from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional, Union, Callable
 
-from flask import jsonify
 import subprocess, os
 
-import config
-from config import LogLevel
-from utils import APIResponse
+
+logger = logging.getLogger(__name__)
 
 
 class ProgramExecutor:
     def __init__(self):
         # Configure logging
         logging.basicConfig(level=logging.INFO)
-        self.logger = config.logger
         self.running_processes = {}
         self._process_counter = 0
         self._lock = threading.Lock()
@@ -191,97 +187,3 @@ class ProgramExecutor:
         else:
             self.logger.warning(f"No process object found for process {process_id}.")
             return False
-
-
-class Command:
-    # v2 (the version must coincide with the server side)
-    def __init__(self, command, function, description="None", needs_message=False):
-        """
-        Constructor that initializes the Command object with a command string and a function.
-        """
-        self._command = command  # Store the command
-        self._function = function  # Store the function reference
-        self._description = description  # Store the command description
-        self._needs_message = needs_message  # Obligatority of extra data for the correct function
-
-    def execute(self, message=None):
-        """
-        Executes the function stored in the 'function' field with the given message as a parameter.
-        """
-        if self._needs_message:
-            return self._function(message)  # Call the stored function with the message
-        else:
-            return self._function()
-
-    def needs_message(self):
-        return self._needs_message
-
-
-def test_command(message=None):
-    #This function is for testing
-    if message:
-        return jsonify(
-            APIResponse.SuccessResponse(f"Command test_command executed with message {message}.").to_dict()
-        ), 200
-    else:
-        return jsonify(
-            APIResponse.SuccessResponse("Command test_command executed correctly.").to_dict()
-        ), 200
-
-
-def show_popup(message=None):
-    """
-    Displays a popup message using a Tkinter messagebox.
-
-    Args:
-        message (str, optional): The message to display in the popup. Defaults to "None".
-
-    Returns:
-        tuple: A JSON response and HTTP status code indicating success.
-    """
-    import tkinter as tk
-    from tkinter import messagebox
-
-    root = tk.Tk()
-    root.withdraw()  # Ocultar la ventana principal
-    messagebox.showinfo("Información", message)
-
-    # Close the application after the popup is closed
-    root.destroy()
-    return jsonify(
-        APIResponse.SuccessResponse("Command popup executed correctly.").to_dict()
-    ), 200
-
-
-def execute_program():
-    def on_program_complete(result):
-        print(f"Program completed! Result: {result}")
-
-    # Create executor instance
-    executor = ProgramExecutor()
-
-    # Execute a program
-    process_id = executor.execute_program(
-        file_path="path/to/your/program.exe",
-        args=["--verbose"],
-        timeout=30,
-        capture_output=True,
-        on_complete=on_program_complete
-    )
-
-    # Main program can continue running while the program executes
-    print(f"Started process with ID: {process_id}")
-
-    # You can check status at any time
-    status = executor.get_process_status(process_id)
-    print(f"Current status: {status['status']}")
-
-    # Check if still running
-    is_running = executor.is_running(process_id)
-    print(f"Is running: {is_running}")
-
-
-class CommandsFunctions(Enum):
-    TestFunction = test_command
-    PopUp = show_popup
-    ExecuteProgram = execute_program

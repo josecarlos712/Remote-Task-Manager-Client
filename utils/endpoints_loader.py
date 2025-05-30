@@ -1,68 +1,75 @@
+import logging
 import os
 import importlib
-from config import logger
+
+logger = logging.getLogger(__name__)
 
 
-def load_endpoints(app):
-    """
-    Loads dynamic api from the 'api' folder.
+def register_endpoint(app, api_path: str) -> tuple[str, int]:
+    """ Helper function to import and register an endpoint. """
+    api_folder = os.path.join(os.path.dirname(__file__), '..')
 
-    This function supports two types of api:
+    if not api_path:
+        return "API path null", 400  # Bad request if api_path is empty
 
-    1. Simple api: If a .py file is found in the root of the 'api' folder, it is treated as an independent
-       endpoint. The endpoint name is derived from the filename (without the .py extension).
+    module_path = api_path.replace('/', '.')
+    endpoint_name = os.path.basename(api_path)
 
-    2. Complex api: If a folder is found inside 'api', it is considered a complex endpoint that consists
-       of multiple files. The function 'register' must be inside a file named 'endpoint.py' within that folder.
-       The endpoint name is the folder name.
+    # Check if the path is an endpoint or a folder (a .py file of a folder with 'endpoint.py')
+    if os.path.isfile(os.path.join(api_folder, f"{api_path}.py")):
+        module_path = f'{module_path}'  # Single-file endpoint
+    elif os.path.isdir(os.path.join(api_folder, api_path)):
+        module_path = f'{module_path}.endpoint'  # sub-level
+    else:
+        return "Invalid API path", 404  # Not found if the path does not exist
 
-    The function attempts to import and register each valid endpoint. If registration fails, a warning is logged.
-
-    :param app: The Flask application instance where api should be registered.
-    """
-
-    loaded_modules = {}  # Stores successfully loaded modules
-    api_folder = os.path.join(os.path.dirname(__file__), '..', 'api')
-
-    for item in os.listdir(api_folder):
-        excluded_files = ['__init__.py', 'blueprint_endpoint.py', '__pycache__', 'disabled']
-        full_path = os.path.join(api_folder, item)
-
-        if os.path.isfile(full_path) and item.endswith('.py') and item not in excluded_files:
-            # Simple endpoint (.py file in the root folder)
-            module_name = item[:-3]
-            module_path = f'api.{module_name}'
-
-        elif os.path.isdir(full_path) and item not in excluded_files:
-            # Complex endpoint (folder containing an 'endpoint.py' file)
-            module_name = item  # The endpoint name is the folder name
-            endpoint_file = os.path.join(full_path, 'endpoint.py')
-
-            if not os.path.exists(endpoint_file):
-                logger.warn(f"Skipping '{module_name}': 'endpoint.py' not found in folder.")
-                continue  # Required file not found, skipping
-
-            module_path = f'api.{module_name}.endpoint'
-
+    # Try to import and register the module
+    try:
+        module = importlib.import_module(module_path)
+        if hasattr(module, 'register'):  # Check if the module has a 'register()' function
+            response, code = module.register(app, api_path)
+            if code == 200:
+                #logger.debug(f"enpoint_loader - {response} for '{endpoint_name}'")
+                return "Endpoint registered", code
+            else:
+                logger.warning(f"Registration failed for '{endpoint_name}'")
+                return response, code  # Return the response and code from the register function
         else:
-            continue  # Neither a valid .py file nor a folder
+            logger.warning(f"No 'register()' function found in '{module_path}'")
+            return f"No 'register()' function found in '{module_path}'", 500  # Internal server error if no register function
+    except Exception as e:
+        logger.error(f"Error loading '{module_path}': {e}")
+        return f"Error loading endpoint '{module_path}': {e}", 500
 
-        # Attempt to import and register the module
-        loaded_modules[module_name] = False
-        try:
-            module = importlib.import_module(module_path)
 
-            if hasattr(module, 'register'):
-                try:
-                    if module.register(app, module_name) == 0:
-                        loaded_modules[module_name] = True
-                    else:
-                        raise ImportError(f"Failed to register endpoint '{module_name}'.")
-                except Exception as e:
-                    logger.warn(f"Failed on 'register()' function for '{module_name}'. - {e}")
+def load_endpoints(app, relative_path: str) -> tuple[str, int]:
+    """
+    Recursively loads API endpoints from the 'api' folder.
 
-        except Exception as e:
-            logger.warn(f"Failed to load module '{module_name}' - {e}")
+    - Each Python file (`*.py`) inside `api/` is treated as an independent endpoint.
+    - Each folder inside `api/` represents a sub-level and must contain an `endpoint.py` file.
+    - The `register()` function inside each file is called with `app` as an argument.
 
-        if loaded_modules[module_name]:
-            logger.debug(f"Loaded module '{module_name}' - OK")
+    :param relative_path: Relative path from the `api` folder to the endpoints.
+    :param app: Flask application instance.
+    """
+    api_folder = os.path.join(os.path.dirname(__file__), '..')
+    excluded = {'__init__.py', 'blueprint_endpoint.py', '__pycache__', 'disabled'}
+
+    # Register all the endpoints inside the folder
+    for item in os.listdir(api_folder + '/' + relative_path):
+        full_path = os.path.join(api_folder, relative_path, item)
+
+        if item in excluded:
+            continue  # Skip excluded files and directories
+
+        if os.path.isfile(full_path) and item.endswith('.py') and not item.endswith('endpoint.py'):
+            # Register single-file API endpoints
+            api_path = relative_path + '/' + item[:-3]  # Remove .py extension
+            register_endpoint(app, api_path=api_path)
+
+        elif os.path.isdir(full_path):
+            # Register complex API endpoints (folders with `endpoint.py` inside)
+            api_path = relative_path + '/' + item
+            register_endpoint(app, api_path=api_path)
+    return "Endpoints loaded successfully", 200  # Return success message

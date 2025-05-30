@@ -1,9 +1,11 @@
 # Blueprint for modular API routes
 from pathlib import Path
+from typing import Dict, Any
 
-from flask import jsonify, request, Response
+from flask import jsonify, Response
 
-from utils.APIResponse import error_handler, APIResponse, BadMethodErrorResponse, SuccessResponse
+from utils.APIResponse import error_handler, APIResponse
+from utils import APIResponse
 from utils.endpoints_loader import load_endpoints
 
 
@@ -23,19 +25,12 @@ def register(app, path) -> tuple[str, int]:
         methods=methods
     )
 
-    # Only the endpoint.py file can register new endpoints
-    if Path(__file__).name == "endpoint.py":
-        response, code = load_endpoints(app, relative_path=path)
-        return response, code
-
-    #Successful import
+    # Successful import
     return "API endpoint registered successfully", 200
 
 
-# This function is executed when the endpoint is accessed.
-def handler() -> Response:
-    """
-    Handles the API request and returns a response.
-    :return: Response in JSON format with client information.
-    """
+def handler(args: Dict[str, Any]) -> Response:
+    # Here goes the function to implement
     ...
+    # Use APIResponse module for returning responses or errors.
+    #   return APIResponse.SuccessResponse("This is a success response").to_response()

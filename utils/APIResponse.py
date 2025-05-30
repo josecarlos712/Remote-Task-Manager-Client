@@ -1,26 +1,45 @@
+import json
 import logging
 from functools import wraps
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 import psutil
-from flask import jsonify
 
-from config import LogLevel, logger
+import logging
+from flask import jsonify, Response, request
+
+logger = logging.getLogger(__name__)
 
 
 class APIResponse:
     """Base API Response class for standardizing API responses."""
 
-    def __init__(self, status: str, message: str, data: Optional[Dict] = None):
+    def __init__(self, status: str, message: str, code: int, data: Optional[Any] = None):
         self.status = status
         self.message = message
         self.data = data
+        self.code = code
 
     def to_dict(self) -> dict:
-        response = {"status": self.status, "message": self.message}
+
+        if isinstance(self, ErrorResponse):
+            response = {"status": self.status, "error": self.message}
+        else:
+            response = {"status": self.status, "message": self.message}
         if self.data is not None:
             response["data"] = self.data
         return response
+
+    def to_response(self) -> Response:  # Or jsonify
+        """
+        Converts the API response to a Flask Response object with JSON content.
+        """
+        # jsonify automatically sets Content-Type to application/json and handles serialization
+        # return jsonify(self.to_dict()), self.code # This is simpler if you always return dicts
+
+        # For more explicit control, use Response
+        json_string = json.dumps(self.to_dict())
+        return Response(json_string, status=self.code, mimetype='application/json')
 
 
 # ========================
@@ -30,10 +49,10 @@ class APIResponse:
 class SuccessResponse(APIResponse):
     """Base class for all successful responses."""
 
-    def __init__(self, message: str, data: Optional[Dict] = None):
+    def __init__(self, message: str, data: Optional[Any] = None):
         # Log successful response with message and data details
-        logging.log(LogLevel.INFO.value, f"SuccessResponse: {message}, Data: {data}")
-        super().__init__("success", message, data)
+        logging.info(f"SuccessResponse: {message}, Data: {data}")
+        super().__init__("success", message, 200, data)
 
 
 class ProcessResponse(SuccessResponse):
@@ -41,7 +60,7 @@ class ProcessResponse(SuccessResponse):
 
     def __init__(self, processes: list[psutil.Process], message: Optional[str]):
         # Log process-related response with number of processes
-        logging.log(LogLevel.INFO.value, f"ProcessResponse: {len(processes)} processes retrieved.")
+        logging.info(f"ProcessResponse: {len(processes)} processes retrieved.")
         super().__init__(message if message else "Process operation successful", {"processes": processes})
 
 
@@ -50,7 +69,7 @@ class ProgramResponse(SuccessResponse):
 
     def __init__(self, programs: Dict):
         # Log program retrieval success with program count
-        logging.log(LogLevel.INFO.value, f"ProgramResponse: {len(programs)} programs retrieved.")
+        logging.info(f"ProgramResponse: {len(programs)} programs retrieved.")
         super().__init__("Program operation successful", {"programs": programs})
 
 
@@ -59,7 +78,7 @@ class SystemInfoResponse(SuccessResponse):
 
     def __init__(self, system_data: Dict, message: Optional[str] = None):
         # Log system info retrieval success
-        logging.log(LogLevel.INFO.value, f"SystemInfoResponse: {message or 'System info retrieved'}")
+        logging.info(f"SystemInfoResponse: {message or 'System info retrieved'}")
         super().__init__("System information", system_data)
 
 
@@ -68,7 +87,7 @@ class LogResponse(SuccessResponse):
 
     def __init__(self, logs: Dict):
         # Log number of logs retrieved
-        logging.log(LogLevel.INFO.value, f"LogResponse: {len(logs)} log entries retrieved.")
+        logging.info(f"LogResponse: {len(logs)} log entries retrieved.")
         super().__init__("System logs retrieved", {"logs": logs})
 
 
@@ -79,10 +98,10 @@ class LogResponse(SuccessResponse):
 class ErrorResponse(APIResponse):
     """Base class for all error responses."""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str, code: int = 500):
         # Log error response with severity level
-        logging.log(LogLevel.ERROR.value, f"ErrorResponse: {message}")
-        super().__init__("error", message)
+        logging.error(f"ErrorResponse: {message}")
+        super().__init__("error", message, code)
 
 
 class NotFoundResponse(ErrorResponse):
@@ -90,8 +109,8 @@ class NotFoundResponse(ErrorResponse):
 
     def __init__(self, resource: str):
         # Log missing resource
-        logging.log(LogLevel.WARNING.value, f"NotFoundResponse: {resource} not found.")
-        super().__init__(f"{resource} not found")
+        logging.warning(f"NotFoundResponse: {resource} not found.")
+        super().__init__(f"{resource} not found", 404)
 
 
 class ValidationErrorResponse(ErrorResponse):
@@ -99,8 +118,8 @@ class ValidationErrorResponse(ErrorResponse):
 
     def __init__(self, field: str):
         # Log missing or invalid field
-        logging.log(LogLevel.WARNING.value, f"ValidationErrorResponse: Missing or invalid field: {field}")
-        super().__init__(f"Missing or invalid field: {field}")
+        logging.warning(f"ValidationErrorResponse: Missing or invalid field: {field}")
+        super().__init__(f"Missing or invalid field: {field}", 400)
 
 
 class InternalErrorResponse(ErrorResponse):
@@ -108,25 +127,99 @@ class InternalErrorResponse(ErrorResponse):
 
     def __init__(self, error: str):
         # Log internal server error
-        logging.log(LogLevel.ERROR.value, f"InternalErrorResponse: {error}")
-        super().__init__(f"Internal server error: {error}")
+        logging.error(f"InternalErrorResponse: {error}")
+        super().__init__(f"Internal server error: {error}", 500)
+
+
+class BadRequestResponse(ErrorResponse):
+    """Response class for bad request errors."""
+
+    def __init__(self, message: str):
+        # Log bad request error
+        logging.warning(f"BadRequestResponse: {message}")
+        super().__init__(f"Bad request: {message}", 400)
+
+
+class UnauthorizedResponse(ErrorResponse):
+    """Response class for unauthorized access errors."""
+
+    def __init__(self, message: str):
+        # Log unauthorized access error
+        logging.warning(f"UnauthorizedResponse: {message}")
+        super().__init__(f"Unauthorized access: {message}", 401)
+
+
+class ForbiddenErrorResponse(ErrorResponse):
+    """Response class for forbidden access errors (authentication succeeded, but user lacks permissions)."""
+
+    def __init__(self, message: str = "Forbidden.", data=None):
+        # Log forbidden access error
+        logging.warning(f"ForbiddenErrorResponse: {message}")
+        # Standard HTTP status code for Forbidden is 403
+        super().__init__(message, data)  # Pass message and data to base ErrorResponse
+        self.code = 403  # Set the specific HTTP status code
+
+
+class BadMethodErrorResponse(ErrorResponse):
+    """Response class for unsupported HTTP method errors."""
+
+    def __init__(self, method: str, expected_method: str):
+        # Log unsupported HTTP method
+        logging.warning(f"BadMethodErrorResponse: Unsupported method: {method}")
+        super().__init__(f"Unsupported method: {method}. Expected method: {expected_method}", 405)
 
 
 # IMPROVEMENT: Added error handling decorator
-def error_handler(f):
-    """
-    Decorator that wraps API api with standardized error handling.
-    Catches exceptions and returns appropriate error responses.
-    """
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
+def error_handler(func):
+    @wraps(func)  # Important for Flask to properly introspect the view function
+    def wrapper(**kwargs):  # Flask will pass URL parameters (like command_id) as keyword arguments here
         try:
-            return f(*args, **kwargs)
+            handler_args = kwargs.copy()  # 1. Start with URL Path Parameters
+
+            # Add Query Parameters (if any)
+            handler_args.update(request.args.to_dict())
+
+            # Add JSON Body Data (if it's a POST/PUT/PATCH with JSON)
+            if request.is_json:  # Checks if Content-Type is application/json
+                json_data = request.get_json()  # Parses the JSON body
+                if isinstance(json_data, dict):  # Ensure it's a dictionary
+                    handler_args.update(json_data)
+                # You might add an else here to handle non-dict JSON or log a warning
+                # else:
+                #     logger.warning(f"Non-dictionary JSON body received for {func.__name__}")
+
+            # Call the actual handler with the consolidated arguments
+            return func(handler_args)
+
         except Exception as e:
-            logger.error(LogLevel.ERROR.value, f"Error in {f.__name__}: {str(e)}", exc_info=True)
-            return jsonify(
-                ErrorResponse(f"Internal server error: {str(e)}").to_dict()
-            ), 500
+            logger.error(f"Error executing command '{func.__name__}': {e}", exc_info=True)
+            # You might want to customize the error response based on the exception type
+            return jsonify({"status": "error", "message": str(e)}), 500
 
     return wrapper
+
+
+def check_None_API(value, error_message: str = None) -> tuple[Response, int] | tuple[None, int]:
+    """
+    Check if the given value is None or empty.
+
+    Args:
+        value: The value to check.
+        error_message (str, optional): An error message to log if the value is None or empty.
+    Returns:
+        tuple: A tuple containing the API response and an HTTP status code.
+    """
+    if value is None:
+        return BadRequestResponse(error_message).to_response(), 400  # 400 Bad Request
+    return None, 200
+
+
+def check_instance_API(obj, instance, error_message: str = None) -> tuple[Response, int] | tuple[None, int]:
+    """
+
+    Returns:
+        tuple: A tuple containing the API response and an HTTP status code.
+    """
+    if obj is isinstance(obj, instance):
+        return BadRequestResponse(error_message).to_response(), 400  # 400 Bad Request
+    return None, 200

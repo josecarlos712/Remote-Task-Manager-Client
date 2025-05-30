@@ -1,8 +1,12 @@
-from flask import jsonify, current_app
+import logging
+from typing import Any, Dict
+
+from flask import jsonify, current_app, Response
 from utils.APIResponse import error_handler
 from utils import APIResponse
 
-def register(app, path) -> int:
+
+def register(app, path) -> tuple[str, int]:
     methods = ['GET']
 
     app.add_url_rule(
@@ -12,14 +16,17 @@ def register(app, path) -> int:
         methods=methods
     )
 
-    return 0  # Successful import
+    return "API endpoint registered successfully", 200
 
-def handler():
+
+def handler(args: Dict[str, Any]) -> Response:
     """
     Returns the API structure in JSON format.
     """
     api_tree = build_api_tree()
-    return jsonify(APIResponse.SuccessResponse("API structure retrieved", api_tree).to_dict()), 200
+    logging.info(f"API tree depth: {args.get('depth', 'not specified')}")
+    return APIResponse.SuccessResponse("This is a success response", api_tree).to_response()
+
 
 def build_api_tree():
     """

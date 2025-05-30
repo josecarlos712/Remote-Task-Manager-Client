@@ -16,7 +16,7 @@ def register(app, path) -> int:
     )
 
     #Successful import
-    return 0
+    return "API endpoint registered successfully", 200
 
 # Paralelizar el envio del mensaje ya que la interfaz se queda esperando a la recepcion. (utilidad de envio de API)
 def handler() -> APIResponse:

@@ -14,11 +14,15 @@ import logging
 from functools import wraps
 
 import config
-from commands import Command, test_command, show_popup, CommandsFunctions
-from config import logger, CONFIG_PATH, VALID_TOKENS
+from commands.Command import Command, show_popup
+from config.init_config import Configuration
 from utils import APIResponse
 from utils.APIResponse import ErrorResponse, error_handler
-from utils.endpoints_loader_recursive import load_endpoints, register_endpoint
+from utils.endpoints_loader import load_endpoints, register_endpoint
+
+logger = logging.getLogger(__name__)
+
+CONFIG_PATH = 'config/programs.json'
 
 
 class RemoteClient:
@@ -40,6 +44,7 @@ class RemoteClient:
         # IMPROVEMENT: Using session for better performance
         self.session = requests.Session()
         self.commands: Dict[str, Command] = {}
+        self.configuration = Configuration()
 
         # IMPROVEMENT: More secure CORS configuration
         CORS(self.app, resources={
@@ -51,14 +56,18 @@ class RemoteClient:
             }
         })
 
-        self._register_routes()
+        response, code = self._register_routes()
+        if code != 200:
+            logger.error(f"Failed to register routes: {response}")
+            raise Exception(f"Failed to register routes: {response}")
+        logger.info(f"Routes registered successfully")
         self._initialize_commands()  # Add the existing commands to the Commands class dictionary
 
         # Health check system
         self.last_health_check = None
         self._start_health_check()
 
-    def _register_routes(self):
+    def _register_routes(self) -> tuple[str, int]:
         """
         IMPROVEMENT: Centralized route registration with error handling
         """
@@ -80,9 +89,10 @@ class RemoteClient:
 
         # Load dynamic routes
         # First, register the root endpoint. All the other endpoints will be registered recursively.
-        register_endpoint(self.app, 'api')
+        response, code = register_endpoint(self.app, 'api')
         # print all the routes
         self.app.logger.info(self.app.url_map)
+        return response, code
 
     def _initialize_commands(self):
         """
@@ -91,11 +101,7 @@ class RemoteClient:
         _commands: Dict = {}
         try:
             # Declare the commands (these commands are built-in)
-            _commands['test_command'] = Command(command='test_command', function=CommandsFunctions.TestFunction,
-                                                description="Command for testing")
-            _commands['execute_program'] = Command(command='execute_program', function=CommandsFunctions.ExecuteProgram, needs_message=True,
-                                                   description="Run a .exe or .bat")
-            logger.info("Commands initialized successfully")
+            ...
         except Exception as e:
             logger.error(f"Failed to initialize commands: {e}")
             raise
@@ -339,34 +345,3 @@ class RemoteClient:
 
         return jsonify(APIResponse.SuccessResponse("", logs).to_dict()), 200
 
-    # ========================
-    #  AUTHENTICATION
-    # ========================
-
-    # @app.route('/api/auth/login', methods=['POST'])
-    def login(self):
-        """ Authenticate user and issue a token """
-        data = request.json
-        username = data.get('username')
-        password = data.get('password')
-
-        if username == 'admin' and password == 'password':  # Replace with real authentication
-            token = os.urandom(16).hex()
-            VALID_TOKENS[token] = username
-            return jsonify(APIResponse.SuccessResponse("Login succesful", {'token': token}).to_dict()), 200
-
-        return jsonify(APIResponse.ErrorResponse('Invalid credentials').to_dict()), 401
-
-    # @app.route('/api/auth/logout', methods=['POST'])
-    def logout(self):
-        """ Log out user by invalidating the token """
-        data = request.json
-        token = data.get('token')
-
-        if token in VALID_TOKENS:
-            del VALID_TOKENS[token]
-            return jsonify(APIResponse('Logged out').to_dict()), 200
-
-        return jsonify(APIResponse.ErrorResponse('Invalid token').to_dict()), 401
-
-# --------------------------------------------- ENDPOINT FUNCTIONS END ------------------------------------------------
