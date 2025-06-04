@@ -12,6 +12,9 @@ from utils import APIResponse
 from utils.programs import ProgramExecutor
 
 
+_registered_commands = {}  # Dictionary to store registered commands
+
+
 class Command:
     # v2 (the version must coincide with the server side)
     def __init__(self, name, title, function, description="None", args_types=None):
@@ -46,39 +49,86 @@ class Command:
             'args': self._args_types,
         }
 
-    def __getitem__(self, name: str):
+    def __getitem__(self, item):
+        """
+        Allows accessing command attributes using dictionary-like syntax.
+        """
+        if item == 'name':
+            return self._name
+        elif item == 'title':
+            return self._title
+        elif item == 'description':
+            return self._description
+        elif item == 'args':
+            return self._args_types
+        else:
+            raise KeyError(f"'{item}' is not a valid command attribute.")
 
-        if not isinstance(name, str):
-            raise TypeError("'name' must be a string")
-        item = name.strip().lower() # All names are lowercase
+    __eq__ = lambda self, other: isinstance(other, Command) and self._name == other._name
 
 
-
-        return getattr(self, f"_{item}", None)
-
-
-def show_popup(message=None):
+def add_command(command: Command) -> tuple[str, int]:
     """
-    Displays a popup message using a Tkinter messagebox.
+    Adds a command to the registered commands dictionary.
 
     Args:
-        message (str, optional): The message to display in the popup. Defaults to "None".
+        command (Command): The Command object to be added.
 
     Returns:
-        tuple: A JSON response and HTTP status code indicating success.
+        tuple[str, int]: A tuple containing a success message and HTTP status code.
     """
-    import tkinter as tk
-    from tkinter import messagebox
+    if not isinstance(command, Command):
+        logging.error("Invalid command object provided.")
+        return "Invalid command object provided.", 400  # Bad Request
 
-    root = tk.Tk()
-    root.withdraw()  # Ocultar la ventana principal
-    messagebox.showinfo("Información", message)
+    if command['name'] in _registered_commands:
+        logging.warning(f"Command '{command['name']}' is already registered.")
+        return f"Command '{command['name']}' is already registered.", 409  # Conflict
 
-    # Close the application after the popup is closed
-    root.destroy()
-    return jsonify(
-        APIResponse.SuccessResponse("Command popup executed correctly.").to_dict()
-    ), 200
+    _registered_commands[command['name']] = command
+    logging.info(f"Command '{command['name']}' registered successfully.")
+    return f"Command '{command['name']}' registered successfully.", 200  # OK
+
+
+def get_all_commands() -> tuple[Dict[str, Command], int]:
+    """
+    Retrieves all registered commands.
+
+    Returns:
+        tuple[Dict[str, Command], int]: A tuple containing a dictionary of all registered commands and HTTP status code.
+    """
+    if not _registered_commands:
+        logging.warning("No commands registered.")
+        return {}, 404  # Not Found
+
+    logging.info("Retrieved all registered commands.")
+    return _registered_commands, 200  # OK
+
+
+def get_command(name: str = "None") -> tuple[str|Command, int]:
+    """
+    Retrieves a command by its name from the registered commands.
+
+    Args:
+        name (str): The name of the command to retrieve.
+
+    Returns:
+        Command: The Command object if found, otherwise None.
+    """
+    # Check if parameter is a valid string
+    if not isinstance(name, str) or not name:
+        logging.error("Invalid command name provided.")
+        return "Invalid command name provided.", 400  # Bad Request
+    if name == "None":
+        logging.warning(f"Command name must be a valid existing command name. Got '{name}'")
+        return f"Command name must be a valid existing command name. Got '{name}'", 400  # Bad Request
+
+    # Retrieve the command from the registered commands dictionary
+    if name not in _registered_commands:
+        logging.error(f"Command '{name}' not found.")
+        return f"Command '{name}' not found.", 404  # Not Found
+
+    return _registered_commands.get(name)
 
 
 def execute_program():

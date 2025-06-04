@@ -1,6 +1,7 @@
-import logging
-import os
 import re
+import os
+import logging
+from typing import Dict, Any, Union
 from logging.handlers import TimedRotatingFileHandler
 
 
@@ -16,9 +17,10 @@ class Configuration:
     # This function is executed on the start of the server to check if everything is okay.
     def start(self):
         self.logging_configuration()
-        #There can't be any logging until the logging initialization
+        # There can't be any logging until the logging initialization
         self.load_specifications()
-        self.load_config()
+        self.read_configuration()
+        self.logging.debug(f"Configuration loaded successfully. {self._settings}")
         self.check_files()
 
     def logging_configuration(self) -> logging:
@@ -33,8 +35,6 @@ class Configuration:
             ]
         )
         self.logging: logging = logging.getLogger(__name__)
-
-        return self.logging
 
     def load_specifications(self):
         import os
@@ -113,8 +113,9 @@ class Configuration:
                 if platform.system() == "Windows":
                     try:
                         bios_version = \
-                        subprocess.check_output("wmic bios get smbiosbiosversion", shell=True).decode().strip().split(
-                            "\n")[1].strip()
+                            subprocess.check_output("wmic bios get smbiosbiosversion",
+                                                    shell=True).decode().strip().split(
+                                "\n")[1].strip()
                         system_info["bios_version"] = bios_version
                     except Exception:
                         system_info["bios_version"] = "Unknown"
@@ -144,30 +145,83 @@ class Configuration:
         self._system_info = save_system_info()
         return self._system_info
 
-    def load_config(self):
-        """Loads the configuration file and parses key-value pairs."""
-        if not os.path.exists(self.config_path):
-            self.logging.log(logging.DEBUG, f"No configuration.ini file. It's necessary to start the server.")
+    def read_configuration(self) -> tuple[Dict[str, Dict[str, Any]] | str, int]:
+        """
+        Reads a configuration file in INI format and returns its contents as a dictionary.
+        It attempts to parse values to appropriate Python types (int, bool, float)
+        where possible. Section and option names are automatically converted to lowercase.
 
-        self._settings = {}
-        with open(self.config_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):  # Ignore empty lines and comments
-                    key, value = map(str.strip, line.split("=", 1))
-                    # The key is no case-sensitive
-                    self._settings[str.lower(key)] = self.parse_value(value)
-            f.close()
+        Args:
+            file_path (str): The path to the INI configuration file.
 
-    def parse_value(self, value):
+        Returns:
+            Dict[str, Dict[str, Any]]: A nested dictionary where top-level keys are
+                                       section names (lowercase) and values are dictionaries
+                                       of options (lowercase) and their parsed values.
+                                       Returns an empty dictionary if the file cannot be read
+                                       or if an error occurs during parsing.
+
+            or str: An error message if the file cannot be read or parsed.
+
+            int: HTTP status code indicating the result of the operation.
+        """
+        import configparser
+        from config.config import configuration_path
+
+        configparser = configparser.ConfigParser()
+        parsed_settings: Dict[str, Dict[str, Any]] = {}
+        file_path = configuration_path
+
+        try:
+            # config.read() returns a list of successfully parsed filenames.
+            # If the list is empty, the file was not found or could not be read.
+            if not configparser.read(file_path):
+                logging.error(f"Configuration file not found or could not be read: '{file_path}'")
+                return f"Configuration file not found or could not be read: '{file_path}'", 404  # Not Found
+
+            # Iterate through each section in the configuration
+            for section in configparser.sections():
+                parsed_settings[section] = {}  # Initialize dictionary for the current section
+                # Iterate through each key-value pair within the section
+                for key, value_str in configparser.items(section):
+                    # Attempt to convert string values to Python types
+                    try:
+                        # 1. Try converting to boolean (case-insensitive 'true'/'false')
+                        if value_str.lower() in ('true', 'false'):
+                            parsed_settings[section][key] = configparser.getboolean(section, key)
+                        # 2. Try converting to integer
+                        elif value_str.strip().isdigit() or (
+                                value_str.strip().startswith('-') and value_str.strip()[1:].isdigit()):
+                            parsed_settings[section][key] = configparser.getint(section, key)
+                        # 3. Try converting to float (handles decimals)
+                        elif '.' in value_str and (value_str.replace('.', '', 1).strip().isdigit() or (
+                                value_str.strip().startswith('-') and value_str[1:].replace('.', '',
+                                                                                            1).strip().isdigit())):
+                            parsed_settings[section][key] = configparser.getfloat(section, key)
+                        # 4. Default to string if no other type matches
+                        else:
+                            parsed_settings[section][key] = value_str.strip()
+                    except ValueError:
+                        # If built-in parsers fail (e.g., trying to parse "0.0.0.0" as float),
+                        # keep the value as a string.
+                        logging.warning(
+                            f"Could not automatically parse '{key}' in section '{section}' (value: '{value_str}'). Storing as string.")
+                        parsed_settings[section][key] = value_str.strip()
+            self._settings = parsed_settings
+
+        except configparser.Error as e:
+            # Catch specific errors from configparser (e.g., malformed INI syntax)
+            logging.error(f"Error parsing configuration file '{file_path}': {e}")
+            return f"Error parsing configuration file '{file_path}': {e}", 400  # Bad Request
+        except Exception as e:
+            # Catch any other unexpected errors
+            logging.error(f"An unexpected error occurred while reading configuration file '{file_path}': {e}",
+                          exc_info=True)
+            return f"An unexpected error occurred while reading configuration file '{file_path}': {e}", 500  # Internal Server Error
+
+    def parse_value(self, value_str) -> Union[str, int, float, bool]:
         """Converts string values to appropriate data types."""
-        if value.lower() in ['true', 'false']:  # Boolean conversion
-            return value.lower() == 'true'
-        elif value.isdigit():  # Integer conversion
-            return int(value)
-        elif value.replace('.', '', 1).isdigit():  # Float conversion
-            return float(value)
-        return value  # Default to string
+        ...
 
     def get_specification_info(self, key_path):
         """This is a get function for the computer speficications.
@@ -186,22 +240,42 @@ class Configuration:
 
     def check_files(self):
         """Check for important directories and files inside the proyect."""
-        #Checking downloads
-        is_absolute_path = bool(re.match(r"^[A-Za-z]:[\\/]", self._settings.get("path_downloads")))
-        downloads_folder = os.path.join(os.getcwd(),
-                                        "../downloads") if is_absolute_path else self._settings.get("path_downloads")
-        try:
-            os.makedirs(downloads_folder, exist_ok=True)
-        except Exception as e:
-            self.logging.log(logging.ERROR, f"CheckFiles ERROR: Exception on os.makedirs - {e}")
+        import os
+        # Checking downloads
+        downloads_folder = self["paths"]["path_downloads"]
+        if not downloads_folder:
+            self.logging.log(logging.ERROR, "CheckFiles ERROR: 'path_downloads' is not defined in the configuration.")
+            return
+        # Ensure the downloads folder exists
+        downloads_folder_absolute = os.path.expanduser(downloads_folder)
+        if not os.path.isabs(downloads_folder_absolute):
+            downloads_folder_absolute = os.path.join(os.getcwd(), downloads_folder)
+        if not os.path.exists(downloads_folder_absolute):
+            self.logging.log(logging.WARNING, f"CheckFiles WARNING: Downloads folder '{downloads_folder_absolute}' does not exist. Creating it.")
+            try:
+                os.makedirs(downloads_folder_absolute, exist_ok=True)
+            except Exception as e:
+                self.logging.log(logging.ERROR, f"CheckFiles ERROR: Exception on os.makedirs - {e}")
+
         self.logging.log(logging.DEBUG, "CheckFiles OK")
 
-    # To get an specific value from the configuration file or the system info
-    def __getitem__(self, key, default = None):
-        """Retrieves a configuration value given the key."""
-        if key in self._settings:
-            return self._settings.get(key, default if default else None)
-        elif key in self._system_info:
-            return self._system_info.get(key, default if default else "Unknown")
-        else:
-            self.logging.log(logging.ERROR, f"{key} is not in suported dicts on Configuration.")
+    # To get a specific value from the configuration file or the system info
+    def __getitem__(self, key: str) -> Union[Dict[str, Any], Any]:
+        """
+        Allows accessing configuration sections and options using dictionary-like syntax.
+        e.g., config["server settings"] to get a section dictionary,
+        or config["paths"]["path_downloads"] to get a specific value.
+
+        Args:
+            key (str): The name of the section or option to retrieve.
+
+        Returns:
+            Union[Dict[str, Any], Any]: A dictionary representing a section, or the value of an option.
+
+        Raises:
+            KeyError: If the specified key (section or option) does not exist.
+        """
+        if key not in self._settings:
+            raise KeyError(f"Configuration key or section '{key}' not found.")
+        return self._settings[key]
+

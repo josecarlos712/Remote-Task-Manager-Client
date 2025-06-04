@@ -28,11 +28,25 @@ def handler(args: Dict[str, Any]) -> Response:
     return APIResponse.SuccessResponse("This is a success response", api_tree).to_response()
 
 
-def build_api_tree():
+def build_api_tree() -> Dict[str, Any]:
     """
     Generates a hierarchical tree of API routes using Flask's url_map.
     - Excludes dynamic routes (e.g., <path:filename>)
     - Includes allowed HTTP methods per endpoint
+    - Returns a nested dictionary structure representing the API endpoints in the format:
+    {
+        "endpoint1": {
+            "sub_endpoint1": {
+                "_methods": ["GET", "POST"]
+            },
+            "sub_endpoint2": {
+                "_methods": ["GET"]
+            }
+        },
+        "endpoint2": {
+            "_methods": ["GET", "PUT"]
+        }
+    }
     """
     tree = {}
 

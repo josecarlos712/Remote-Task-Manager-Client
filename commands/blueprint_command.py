@@ -55,13 +55,11 @@ class CommandEnpoint:
         """
         Handles the logic for the 'YOUR_COMMAND_NAME' command.
 
-        Args:
-            args (Dict[str, Any]): A dictionary containing consolidated arguments
+        :param args: (Dict[str, Any]): A dictionary containing consolidated arguments
                                    (URL path params, query params, JSON body).
                                    Access command-specific parameters using args.get('param_name').
 
-        Returns:
-            tuple[str, Any]: A tuple containing the command status and a dictionary with response data.
+        :returns: tuple[str, Any]: A tuple containing the command status and a dictionary with response data.
                              The first element is a string indicating the command status,
                              and the second element is a HTTP code for the resulting command.
         """
@@ -87,20 +85,18 @@ def register() -> Tuple[CommandEnpoint | str, int]:
     """
     Registers this specific command with the global command registry.
 
-    Args:
-        app (Any): The Flask application instance. Passed by the _load_all_commands function.
+    :param app: Flask: The Flask application instance. Passed by the _load_all_commands function.
                    Only needed if this command needs to register its own specific Flask routes
                    beyond what the general command dispatcher handles (rare for these types of commands).
-        path (Any): The base path for this command. Passed by the _load_all_commands function.
+    :param path: str: The base path for this command. Passed by the _load_all_commands function.
                     (Typically ignored here unless you need to build specific sub-routes).
 
-    Returns:
-        Tuple[Union[str, Command], int]: A tuple containing the Command object and 200 on success,
+    :returns Tuple[Union[str, Command], int]: A tuple containing the Command object and 200 on success,
                                          or an error message string and an HTTP status code on failure.
     """
     # --- Define Command Metadata ---
     # These values will be used to describe your command in the API listing.
-    command_title = "Test Command"  # <--- User-friendly title (e.g., "Retrieve User Details")
+    command_title = "Your Command Display Title"  # <--- User-friendly title (e.g., "Retrieve User Details")
     command_description = "A brief description of what this command does and its purpose."
 
     # Define expected arguments for documentation and potential validation.

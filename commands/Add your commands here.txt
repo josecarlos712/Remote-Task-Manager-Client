@@ -1,0 +1,6 @@
+Add the commands here as .py files. Copy and paste the blueprint and fill with your command logic.
+The command is automatically imported and registered in the system start.
+All the commands must be in the 'commands' folder, and not in subfolders.
+# e.g. command file: my_command.py
+    name = 'my_command' # the name of the command is the file name without the .py extension
+    handler = handler() # the handler function to execute when the command is called

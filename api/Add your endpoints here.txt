@@ -1,0 +1,4 @@
+For every sub-level of the API, create a new folder with the name of the sub-level.
+Inside that folder, create all the endpoints related to that sub-level. Copy and paste the blueprint and fill with your endpoint logic.
+    e.g: sub-level 'commands' is a folder named 'commands'.
+         Inside that folder, there are files 'endpoint.py', 'execution.py', 'list.py', etc. each of the correspoinding to different endpoints.

@@ -6,24 +6,21 @@ from flask import jsonify, Response
 
 from utils.APIResponse import error_handler, APIResponse
 from utils import APIResponse
-from utils.endpoints_loader import load_endpoints
 
 
-def register(app, path) -> tuple[str, int]:
+def register(endpoint_loader, app, path) -> tuple[str, int]:
     """
     Registers the API endpoint with a Flask application.
-
-    Parameters:
-        app (Flask): Flask application instance
-        path (str): The path for the endpoint being registered
-
-    Returns:
-        tuple: (Message, HTTP status code)
-
     Functionality:
     - Registers a new API endpoint using Flask's add_url_rule
     - Implements error handling using the error_handler decorator
     - Ensures only endpoint.py can register new endpoints
+
+
+    :param: app: Flask: Flask application instance
+    :param: path: str: The path for the endpoint being registered
+
+    :returns: tuple[str, int]: (Message, HTTP status code)
     """
     # Define HTTP methods supported by this endpoint
     methods = ['GET']
@@ -39,7 +36,7 @@ def register(app, path) -> tuple[str, int]:
     # Special case: Only the endpoint.py file can dynamically register new endpoints
     if Path(__file__).name == "endpoint.py":
         # Load endpoints recursively from the specified path
-        response, code = load_endpoints(app, relative_path=path)
+        response, code = endpoint_loader.load_endpoints(app, relative_path=path)
         return response, code
 
     # Successful import

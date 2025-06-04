@@ -14,11 +14,11 @@ import logging
 from functools import wraps
 
 import config
-from commands.Command import Command, show_popup
+from commands.Command import Command
 from config.init_config import Configuration
 from utils import APIResponse
 from utils.APIResponse import ErrorResponse, error_handler
-from utils.endpoints_loader import load_endpoints, register_endpoint
+from utils.commands_utils import CommandsLoader
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class RemoteClient:
         self.app = Flask(__name__)
         # IMPROVEMENT: Using session for better performance
         self.session = requests.Session()
-        self.commands: Dict[str, Command] = {}
+        self.commands_loader: CommandsLoader = None
         self.configuration = Configuration()
 
         # IMPROVEMENT: More secure CORS configuration
@@ -61,7 +61,7 @@ class RemoteClient:
             logger.error(f"Failed to register routes: {response}")
             raise Exception(f"Failed to register routes: {response}")
         logger.info(f"Routes registered successfully")
-        self._initialize_commands()  # Add the existing commands to the Commands class dictionary
+        self._register_commands()  # Add the existing commands to the Commands class dictionary
 
         # Health check system
         self.last_health_check = None
@@ -71,6 +71,7 @@ class RemoteClient:
         """
         IMPROVEMENT: Centralized route registration with error handling
         """
+        from utils.endpoints_loader import EndpointsLoader
 
         # New routes like '/api/endpoint' are defined as:
         #    'endpoint': (self.function_endpoint, ["POST", "GET"])
@@ -88,24 +89,23 @@ class RemoteClient:
             )
 
         # Load dynamic routes
+        endpoints_loader = EndpointsLoader(app=self.app)
         # First, register the root endpoint. All the other endpoints will be registered recursively.
-        response, code = register_endpoint(self.app, 'api')
+        response, code = endpoints_loader.load_endpoints(endpoints_loader, 'api')
         # print all the routes
         self.app.logger.info(self.app.url_map)
         return response, code
 
-    def _initialize_commands(self):
-        """
-        IMPROVEMENT: Added error handling for command initialization
-        """
-        _commands: Dict = {}
-        try:
-            # Declare the commands (these commands are built-in)
-            ...
-        except Exception as e:
-            logger.error(f"Failed to initialize commands: {e}")
-            raise
-        self.commands = _commands
+    def _register_commands(self) -> tuple[str, int]:
+        """Load commands from the commands folder."""
+        from utils.commands_utils import CommandsLoader
+        self.commands_loader = CommandsLoader(self.app)
+        response, code = self.commands_loader.discover_commands()
+        if code != 200:
+            logger.error(f"Failed to load commands: {response}")
+            return response, code
+
+        return response, code
 
     # IMPROVEMENT: Made request sending asynchronous
     async def send_request(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -177,6 +177,65 @@ class RemoteClient:
                 threading.Event().wait(60)  # Check every minute
 
         # threading.Thread(target=health_check, daemon=True).start()
+
+    def _load_all_commands(self) -> None:
+        """
+        Discovers and loads all command modules from the 'commands' subdirectory
+        and registers them. This ensures they are available in _registered_commands.
+        """
+        import importlib
+        # All the commands are loaded from the 'commands' directory, so we set it as a imported package.
+        import commands as command_pkg
+        from commands import Command as command_file
+        from commands.Command import Command
+
+        commands_dir = os.path.join(os.path.dirname(__file__), 'commands')
+
+        if not os.path.isdir(commands_dir):
+            logger.error(f"Commands directory not found at expected path: {commands_dir}")
+            _commands_loaded_flag = True  # Mark as loaded to prevent repeated error logs
+            return
+
+        logger.info(f"Initiating command loading from: {commands_dir}")
+
+        # Determine the base Python package path for command modules
+        # So, the commands within the 'commands' folder would be similar to 'commands.example_command'
+        base_package_for_commands = f"commands"
+
+        for filename in os.listdir(commands_dir):
+            exclude_files = ['__init__.py', 'Command.py']  # Exclude these files from loading
+            if filename.endswith('.py') and filename not in exclude_files:
+                module_name = filename[:-3]  # Remove .py extension (e.g., 'list', 'get_time')
+                full_module_import_path = f"{base_package_for_commands}.{module_name}"
+
+                try:
+                    logger.debug(f"Attempting to import command module: {full_module_import_path}")
+                    command_module = importlib.import_module(full_module_import_path)
+
+                    if hasattr(command_module, 'register'):
+                        # Call the 'register' function within the individual command module.
+                        # It returns (Command_obj, 200) or (error_message, error_code).
+                        reg_result, reg_code = command_module.register()
+
+                        if reg_code == 200 and isinstance(reg_result, Command):
+                            response, code = command_file.add_command(reg_result)
+                            if code != 200:
+                                logger.error(f"Failed to add command '{reg_result['name']}': {response}")
+                            logger.info(f"Successfully registered command: '{reg_result['name']}' from '{filename}'")
+                        else:
+                            logger.warning(
+                                f"Failed to register command from '{filename}': {reg_result} (Code: {reg_code})")
+                    else:
+                        logger.warning(f"Command module '{filename}' has no 'register()' function; skipping.")
+
+                except ImportError as ie:
+                    logger.error(f"ImportError loading command module '{full_module_import_path}': {ie}")
+                except Exception as e:
+                    logger.error(f"Error during registration process for '{filename}': {e}", exc_info=True)
+
+        _commands_loaded_flag = True
+        response, code = command_file.get_all_commands()
+        logger.info(f"Finished loading commands. Total registered: {len(response)}.")
 
     # ------------------------------------------------ ENDPOINT FUNCTIONS -------------------------------------------------
     # IMPROVEMENT: Enhanced API api with better responses and error handling

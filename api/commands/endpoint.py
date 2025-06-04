@@ -1,8 +1,10 @@
 # Blueprint for modular API routes
 from pathlib import Path
+from typing import Dict
 
 from flask import jsonify
 
+from commands.Command import Command
 from utils.APIResponse import error_handler, APIResponse
 from utils import APIResponse
 from utils.endpoints_loader import load_endpoints
@@ -33,7 +35,11 @@ def register(app, path) -> tuple[str, int]:
 
 
 def handler() -> APIResponse:
-    #Here goes the function to implement
+    # This endpoint load all the commands and returns a Dict[Command] with all the commands registered.
     ...
     # Use APIResponse module for returning responses or errors.
     #   return jsonify(APIResponse.SuccessResponse("This is a success response").to_dict()), 200
+
+
+def _load_all_commands() -> tuple[str|Dict[str, Command], int]:
+    ...
