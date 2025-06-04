@@ -5,3 +5,4 @@ login_tokens = {}  # Store valid tokens
 
 # Paths
 configuration_path = "config/configuration.ini"
+SERVER_SOCKET = None  # Will be set by the main script

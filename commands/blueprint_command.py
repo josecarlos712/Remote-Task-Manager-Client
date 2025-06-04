@@ -25,7 +25,7 @@ class CommandEnpoint:
         self.command = Command.Command(
             name=__file__.split('/')[-1].replace('.py', ''),  # Use the filename as the command name. This ensures the unique identificator is not duplicated.
             title=title,
-            function=self.handler,  # Point to the 'handler' function defined above
+            function=self,  # Point to the 'handler' function
             description=description,
             args_types=args_types
         )
@@ -51,7 +51,7 @@ class CommandEnpoint:
             raise KeyError(f"'{item}' is not a valid command attribute.")
 
     # Command Handler Function
-    def handler(self, args: Dict[str, Any]) -> tuple[Any, int]:
+    def __call__(self, **kwargs: Dict[str, Any]) -> tuple[Dict[str, Any] | str, int]:
         """
         Handles the logic for the 'YOUR_COMMAND_NAME' command.
 
@@ -63,17 +63,17 @@ class CommandEnpoint:
                              The first element is a string indicating the command status,
                              and the second element is a HTTP code for the resulting command.
         """
-        logger.info(f"Executing YOUR_COMMAND_NAME command with arguments: {args}")
+        logger.info(f"Executing YOUR_COMMAND_NAME command with arguments: {kwargs}")
         # Check if required arguments are present
         required_args = self.command['args_types']
         for arg in required_args:
-            if arg['required'] and arg['name'] not in args:
+            if arg['required'] and arg['name'] not in kwargs:
                 error_message = f"Missing required argument: {arg['name']}"
                 logger.error(error_message)
-                return error_message, 400 # Return 400 Bad Request if required argument is missing
+                return error_message, 400  # Return 400 Bad Request if required argument is missing
 
         # Execute the command logic.
-        response, code = helper_function(args)
+        response, code = helper_function(**kwargs)
 
         # Return the data that will be included in the API response's 'data' field.
         return response, code
@@ -132,8 +132,16 @@ def register() -> Tuple[CommandEnpoint | str, int]:
 
 
 # This is a helper function that contains the actual logic of the command.
-def helper_function(args) -> tuple[str, int]:
-    return "Example function executed successfully.", 200
+def helper_function(**kwargs: Dict[str, Any]) -> tuple[Dict[str, Any] | str, int]:
+    """
+    Example function that simulates command execution.
+    :param args: Dict[str, Any]: A dictionary containing command arguments.
+    :return: tuple[Dict[str, Any] | str, int]: A tuple containing a message and HTTP status code.
+    """
+    example_message = {
+        "message": "Example function executed successfully."
+    }
+    return example_message, 200
 
 
 

@@ -119,7 +119,7 @@ class CommandsLoader:
     This class is responsible for discovering, registering, and managing command endpoints.
     """
     def __init__(self, app: Flask):
-        self.command_endpoints = {}
+        self.command_endpoints: Dict[str, CommandEnpoint] = {}
 
     def discover_commands(self):
         """
@@ -196,6 +196,21 @@ class CommandsLoader:
             Dict[str, CommandEnpoint]: A dictionary of command endpoints.
         """
         return self.command_endpoints
+
+    def __call__(self, command, **kwargs) -> tuple[CommandEnpoint | str, int]:
+        """
+        Allows the CommandsLoader instance to be called as a function.
+        This can be used to trigger the discovery of commands.
+        """
+        if not command:
+            logger.error("Command name is empty.")
+            return "Command name cannot be empty.", 400
+
+        # Pop the 'command' key from kwargs to avoid passing it as a parameter.
+        command_kargs = kwargs.copy()
+        command_kargs.pop('command', None)  # Remove 'command' from kargs to pass only parameters.
+
+        return self.command_endpoints[command](**command_kargs)
 
     def __getitem__(self, name: str) -> tuple[CommandEnpoint | str, int]:
         """

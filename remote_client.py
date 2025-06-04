@@ -292,6 +292,14 @@ class RemoteClient:
             }).to_dict()
         ), 200
 
+    def get_command(self, command_name: str) -> tuple[CommandEndpoint]:
+        """
+        Get a command by its name.
+
+        :param command_name: The name of the command to retrieve.
+        :return: Command object if found, None otherwise.
+        """
+        return self.commands_loader[command_name]
     # ========================
     #  PROGRAM SYNCHRONIZATION
     # ========================
