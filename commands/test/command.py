@@ -42,7 +42,7 @@ class CommandEnpoint:
             return NotImplemented
         return self.command == other.command
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> Any:
         """
         Allows accessing command attributes using dictionary-like syntax.
         """
