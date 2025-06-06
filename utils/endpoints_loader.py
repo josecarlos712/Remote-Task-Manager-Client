@@ -47,14 +47,14 @@ class EndpointsLoader:
                 # Register complex API endpoints (folders with `endpoint.py` inside)
                 api_path = relative_path + '/' + item
                 self.register_endpoint(api_path)
-        return "Endpoints loaded successfully", 200  # Return success message
+        return f"{__file__} - Endpoints loaded successfully", 200  # Return success message
 
     def register_endpoint(self, api_path: str) -> tuple[str, int]:
         """ Helper function to import and register an endpoint. """
         api_folder = os.path.join(os.path.dirname(__file__), '..')
 
         if not api_path:
-            return "API path null", 400  # Bad request if api_path is empty
+            return f"{__file__} - API path null", 400  # Bad request if api_path is empty
 
         module_path = api_path.replace('/', '.')
         endpoint_name = os.path.basename(api_path)
@@ -65,7 +65,7 @@ class EndpointsLoader:
         elif os.path.isdir(os.path.join(api_folder, api_path)):
             module_path = f'{module_path}.endpoint'  # sub-level
         else:
-            return "Invalid API path", 404  # Not found if the path does not exist
+            return f"{__file__} - Invalid API path", 404  # Not found if the path does not exist
 
         # Try to import and register the module
         try:
@@ -74,13 +74,13 @@ class EndpointsLoader:
                 response, code = module.register(self, self.app, api_path)
                 if code == 200:
                     #logger.debug(f"enpoint_loader - {response} for '{endpoint_name}'")
-                    return "Endpoint registered", code
+                    return f"{__file__} - Endpoint registered", code
                 else:
-                    logger.warning(f"Registration failed for '{endpoint_name}'")
+                    logger.warning(f"{__file__} - Registration failed for '{endpoint_name}'")
                     return response, code  # Return the response and code from the register function
             else:
-                logger.warning(f"No 'register()' function found in '{module_path}'")
-                return f"No 'register()' function found in '{module_path}'", 500  # Internal server error if no register function
+                logger.warning(f"{__file__} - No 'register()' function found in '{module_path}'")
+                return f"{__file__} - No 'register()' function found in '{module_path}'", 500  # Internal server error if no register function
         except Exception as e:
-            logger.error(f"Error loading '{module_path}': {e}")
-            return f"Error loading endpoint '{module_path}': {e}", 500
+            logger.error(f"{__file__} - Error loading '{module_path}': {e}")
+            return f"{__file__} - Error loading endpoint '{module_path}': {e}", 500

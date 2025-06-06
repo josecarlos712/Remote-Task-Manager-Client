@@ -4,6 +4,8 @@ import logging
 from typing import Dict, Any, Union
 from logging.handlers import TimedRotatingFileHandler
 
+LOGGING_LEVEL = logging.DEBUG  # Set the default logging level
+
 
 class Configuration:
     def __init__(self, config_path='config/'
@@ -26,7 +28,7 @@ class Configuration:
     def logging_configuration(self) -> logging:
         log_file = "logs/system.log"
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=LOGGING_LEVEL,
             format="%(asctime)s - %(levelname)s - %(message)s",
             handlers=[
                 logging.StreamHandler(),
@@ -251,7 +253,8 @@ class Configuration:
         if not os.path.isabs(downloads_folder_absolute):
             downloads_folder_absolute = os.path.join(os.getcwd(), downloads_folder)
         if not os.path.exists(downloads_folder_absolute):
-            self.logging.log(logging.WARNING, f"CheckFiles WARNING: Downloads folder '{downloads_folder_absolute}' does not exist. Creating it.")
+            self.logging.log(logging.WARNING,
+                             f"CheckFiles WARNING: Downloads folder '{downloads_folder_absolute}' does not exist. Creating it.")
             try:
                 os.makedirs(downloads_folder_absolute, exist_ok=True)
             except Exception as e:
@@ -278,4 +281,3 @@ class Configuration:
         if key not in self._settings:
             raise KeyError(f"Configuration key or section '{key}' not found.")
         return self._settings[key]
-

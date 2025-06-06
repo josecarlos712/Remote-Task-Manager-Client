@@ -2,7 +2,7 @@ import logging
 import threading
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional, Union, Callable
+from typing import Dict, Optional, Union, Callable, Any
 
 from flask import jsonify
 import subprocess, os
@@ -23,6 +23,8 @@ class Command:
         """
         if args_types is None:
             self._args_types = []
+        else:
+            self._args_types = args_types
         self._name = name  # Store the command
         self._title = title  # Store the command title
         self._function = function  # Store the function reference
@@ -46,7 +48,7 @@ class Command:
             'title': self._title,
             'command': self._name,
             'description': self._description,
-            'args': self._args_types,
+            'args_types': self._args_types,
         }
 
     def __getitem__(self, item):
@@ -59,7 +61,7 @@ class Command:
             return self._title
         elif item == 'description':
             return self._description
-        elif item == 'args':
+        elif item == 'args_types':
             return self._args_types
         else:
             raise KeyError(f"'{item}' is not a valid command attribute.")

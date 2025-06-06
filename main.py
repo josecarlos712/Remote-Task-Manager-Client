@@ -1,5 +1,5 @@
-from remote_client import RemoteClient
-import config
+from remote_client import RemoteClient, logger
+import config.config as server_config
 
 
 # Usage example for Point A
@@ -8,12 +8,6 @@ if __name__ == '__main__':
     # Initialize and start the RemoteClient instance for Point A
     point_a = RemoteClient(name="Point A", port=5000, target_url=f'http://{server_socket[0]}:{server_socket[1]}')
     point_a.start_server()
-
-    # Save the server socket to the configuration for global access
-    config.SERVER_SOCKET = server_socket
-
-    # Send a test request to Point B
-    #point_a.send_request({"message": "Hello from Point A"})
 
 # SUGGESTED FUTURE IMPROVEMENTS (not implemented):
 """

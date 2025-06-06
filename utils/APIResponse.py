@@ -11,7 +11,7 @@ from flask import jsonify, Response, request
 logger = logging.getLogger(__name__)
 
 
-class APIResponse:
+class APIResponse():
     """Base API Response class for standardizing API responses."""
 
     def __init__(self, status: str, message: str, code: int, data: Optional[Any] = None):
@@ -52,6 +52,8 @@ class SuccessResponse(APIResponse):
     def __init__(self, message: str, data: Optional[Any] = None):
         # Log successful response with message and data details
         logging.info(f"SuccessResponse: {message}, Data: {data}")
+        if data is None:
+            data = {}
         super().__init__("success", message, 200, data)
 
 
@@ -189,10 +191,10 @@ def error_handler(func):
                 #     logger.warning(f"Non-dictionary JSON body received for {func.__name__}")
 
             # Call the actual handler with the consolidated arguments
-            return func(handler_args)
+            return func(**handler_args)
 
         except Exception as e:
-            logger.error(f"Error executing command '{func.__name__}': {e}", exc_info=True)
+            logger.error(f"{__file__} - Error executing command '{func.__name__}': {e}", exc_info=True)
             # You might want to customize the error response based on the exception type
             return jsonify({"status": "error", "message": str(e)}), 500
 

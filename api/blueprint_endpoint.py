@@ -36,19 +36,19 @@ def register(endpoint_loader, app, path) -> tuple[str, int]:
     # Special case: Only the endpoint.py file can dynamically register new endpoints
     if Path(__file__).name == "endpoint.py":
         # Load endpoints recursively from the specified path
-        response, code = endpoint_loader.load_endpoints(app, relative_path=path)
+        response, code = endpoint_loader.load_endpoints(path)
         return response, code
 
     # Successful import
-    return "API endpoint registered successfully", 200
+    return f"{__file__} - API endpoint registered successfully", 200
 
 
-def handler(args: Dict[str, Any]) -> Response:
+def handler(**kwargs: Dict[str, Any]) -> Response:
     """
         Main handler function for API endpoint.
 
         Parameters:
-            args (Dict[str, Any]): Request arguments and data
+            **kwargs (Dict[str, Any]): Request arguments and data
 
         Returns:
             Response: Flask response object

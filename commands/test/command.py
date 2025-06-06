@@ -4,10 +4,10 @@
 # 3. Fill in the placeholders marked with 'YOUR_COMMAND_NAME' and add your logic.
 
 from typing import Dict, Any, List, Optional, Tuple, Union
-
+import os
 from flask import Flask
 
-from commands import Command
+from commands.Command import Command
 
 # It's good practice to have a logger for each module
 import logging
@@ -22,8 +22,15 @@ class CommandEnpoint:
     """
 
     def __init__(self, title: str, description: str, args_types: Optional[List[Dict[str, Any]]] = None):
-        self.command = Command.Command(
-            name=__file__.split('/')[-1].replace('.py', ''),  # Use the filename as the command name. This ensures the unique identificator is not duplicated.
+        if args_types is None:
+            args_types = []
+
+        command_directory = os.path.dirname(__file__)
+        command_name = os.path.basename(command_directory)
+
+        self.command = Command(
+            name=command_name,
+            # Use the filename as the command name. This ensures the unique identificator is not duplicated.
             title=title,
             function=self,  # Point to the 'handler' function
             description=description,
@@ -63,12 +70,12 @@ class CommandEnpoint:
                              The first element is a string indicating the command status,
                              and the second element is a HTTP code for the resulting command.
         """
-        logger.info(f"Executing YOUR_COMMAND_NAME command with arguments: {kwargs}")
+        logger.info(f"{__file__} - Executing YOUR_COMMAND_NAME command with arguments: {kwargs}")
         # Check if required arguments are present
         required_args = self.command['args_types']
         for arg in required_args:
             if arg['required'] and arg['name'] not in kwargs:
-                error_message = f"Missing required argument: {arg['name']}"
+                error_message = f"{__file__} - Missing required argument: {arg['name']}"
                 logger.error(error_message)
                 return error_message, 400  # Return 400 Bad Request if required argument is missing
 
@@ -77,6 +84,19 @@ class CommandEnpoint:
 
         # Return the data that will be included in the API response's 'data' field.
         return response, code
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Converts the CommandEndpoint instance's command metadata to a dictionary
+        for API response. Delegates to the internal Command object's to_dict method.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the command's name, title,
+                            description, and arguments.
+        """
+        # The internal Command object already has a to_dict method
+        # that returns the desired structure.
+        return self.command.to_dict()
 
 
 # Command Registration Function
@@ -127,7 +147,6 @@ def register() -> Tuple[CommandEnpoint | str, int]:
         args_types=command_args_types
     )
 
-    logger.info(f"Command '{commandenpoint_instance['name']}' prepared for registration.")
     return commandenpoint_instance, 200
 
 
@@ -142,7 +161,3 @@ def helper_function(**kwargs: Dict[str, Any]) -> tuple[Dict[str, Any] | str, int
         "message": "Example function executed successfully."
     }
     return example_message, 200
-
-
-
-

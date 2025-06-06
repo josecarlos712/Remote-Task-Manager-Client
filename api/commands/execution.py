@@ -8,24 +8,39 @@ from utils.APIResponse import error_handler, APIResponse
 from utils import APIResponse
 
 
-def register(app, path) -> tuple[str, int]:
+def register(endpoint_loader, app, path) -> tuple[str, int]:
     """
-    Registers the API endpoint with the Flask application.
-    :param app: Flask application instance
-    :param path: The path for the endpoint to be registered
-    :return: tuple[str, int]: Tuple containing a message and HTTP status code
+    Registers the API endpoint with a Flask application.
+    Functionality:
+    - Registers a new API endpoint using Flask's add_url_rule
+    - Implements error handling using the error_handler decorator
+    - Ensures only endpoint.py can register new endpoints
+
+
+    :param: app: Flask: Flask application instance
+    :param: path: str: The path for the endpoint being registered
+
+    :returns: tuple[str, int]: (Message, HTTP status code)
     """
+    # Define HTTP methods supported by this endpoint
     methods = ['POST']
 
+    # Register the API endpoint with Flask
     app.add_url_rule(
-        f'/{path}',
-        endpoint=path,
-        view_func=error_handler(handler),  # Added error handling
-        methods=methods
+        f'/{path}',  # The actual URL path
+        endpoint=path,  # Unique endpoint identifier
+        view_func=error_handler(handler),  # Wrap handler with error handling
+        methods=methods  # Supported HTTP methods
     )
 
+    # Special case: Only the endpoint.py file can dynamically register new endpoints
+    if Path(__file__).name == "endpoint.py":
+        # Load endpoints recursively from the specified path
+        response, code = endpoint_loader.load_endpoints(path)
+        return response, code
+
     # Successful import
-    return "API endpoint registered successfully", 200
+    return f"{__file__} - API endpoint registered successfully", 200
 
 
 def handler(**kwargs: Dict[str, Any]) -> Response:
@@ -37,7 +52,7 @@ def handler(**kwargs: Dict[str, Any]) -> Response:
     #     'param2': 'value2',
     #     }
     # }
-    
+
     # Imports inside the function to avoid circular or premature imports.
     from config.config import SERVER_SOCKET
     from remote_client import RemoteClient
@@ -47,6 +62,6 @@ def handler(**kwargs: Dict[str, Any]) -> Response:
         return APIResponse.ErrorResponse("Command name is required", 400).to_response()
 
     # Call the commands loader with the provided arguments.
-    SERVER_SOCKET.commands_loader(**kwargs)
+    response = SERVER_SOCKET.commands_loader(**kwargs)
     # Use APIResponse module for returning responses or errors.
-    return APIResponse.SuccessResponse("This is a success response").to_response()
+    return response
