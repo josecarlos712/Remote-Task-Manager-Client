@@ -69,7 +69,7 @@ def handler(**kwargs: Dict[str, Any]) -> Response:
     commands_endpoints, code = SERVER_SOCKET.commands_loader[
         ""]  # Get all commands registered in the command loader passing an empty string to __getitem__ function.
     if code != 200:
-        return APIResponse.ErrorResponse("No commands registered", 404).to_response()
+        commands_endpoints = {}
     # Convert the commands to a list of dictionaries for the API response.
     commands_list = [command.to_dict() for command in commands_endpoints.values()]
     # Return the list of commands as a JSON response.

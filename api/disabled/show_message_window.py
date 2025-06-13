@@ -15,17 +15,18 @@ def register(app, path) -> int:
         methods=methods
     )
 
-    #Successful import
+    # Successful import
     return "API endpoint registered successfully", 200
 
+
 # Paralelizar el envio del mensaje ya que la interfaz se queda esperando a la recepcion. (utilidad de envio de API)
-def handler() -> APIResponse:
+def handler(**kwargs) -> APIResponse:
     from flask import request, jsonify
     import tkinter as tk
     from tkinter import messagebox
 
     # Obtener el mensaje del cuerpo de la solicitud POST
-    data = request.get_json()
+    data = kwargs
     message = data.get("message", "Default message")
 
     # Crear la ventana principal
@@ -49,6 +50,3 @@ def handler() -> APIResponse:
     root.mainloop()
 
     return jsonify(APIResponse.SuccessResponse("Message delivered successfully").to_dict()), 200
-
-
-
