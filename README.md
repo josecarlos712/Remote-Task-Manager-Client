@@ -2,6 +2,8 @@
 
 This project corresponds to the **client** component of a client-server system developed as a Bachelor's Thesis (TFG). It listens for instructions from the server and executes them on the local machine.
 
+You can find the server-side application on https://github.com/josecarlos712/Remote-Task-Manager
+
 ## ⚙️ Features
 
 - Listens for commands from the server on a local network.
