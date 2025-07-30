@@ -8,8 +8,7 @@ LOGGING_LEVEL = logging.DEBUG  # Set the default logging level
 
 
 class Configuration:
-    def __init__(self, config_path='config/'
-                                   'configuration.ini'):
+    def __init__(self, config_path='config/configuration.ini'):
         self._system_info = {}
         self.logging = None
         self.config_path = config_path

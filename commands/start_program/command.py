@@ -147,13 +147,26 @@ def register() -> Tuple[CommandEndpoint | str, int]:
     ]
 
     # Create an instance of the Command class
-    commandenpoint_instance = CommandEndpoint(
-        title=command_title,
-        description=command_description,
-        args_types=command_args_types
+    start_program_command = CommandEndpoint(
+        title="Launch Background Program",
+        description="Launches a .exe or .bat file in a separate thread so the server remains responsive.",
+        args_types=[
+            {
+                "name": "path",
+                "type": "str",
+                "required": True,
+                "description": "The full path to the executable file (.exe or .bat) to run."
+            },
+            {
+                "name": "working_dir",
+                "type": "str",
+                "required": False,
+                "description": "Optional working directory for the executable. Defaults to None."
+            }
+        ]
     )
 
-    return commandenpoint_instance, 200
+    return start_program_command, 200
 
 
 def helper_function(**kwargs: Dict[str, Any]) -> Tuple[str, int]:
@@ -172,7 +185,53 @@ def helper_function(**kwargs: Dict[str, Any]) -> Tuple[str, int]:
         - Example return: APIResponse.SuccessResponse("message", data).to_response()
         - For errors: APIResponse.ErrorResponse("error message", code).to_response()
         """
-    ...
-    # TODO: Implement actual endpoint logic here
+    import threading
+    import subprocess
+    import os
+    import time
+
+    # Check if the required arguments are present
+    if 'path' not in kwargs:
+        return "Executable path is required.", 400
+
+    def run_program_async(args: dict) -> Tuple[str, int]:
+        executable_path = args.get("path")
+        working_dir = args.get("working_dir", None)
+
+        if not executable_path or not os.path.exists(executable_path):
+            return "Executable path is missing or invalid.", 400
+
+        def launch_program():
+            try:
+                if executable_path.lower().endswith(".bat"):
+
+                    command = ["powershell.exe", "-Command", f"Start-Process cmd -ArgumentList '/c {executable_path}'"]
+                else:
+                    command = [executable_path]
+
+                process = subprocess.Popen(
+                    command,
+                    cwd=working_dir,
+                    shell=False,  # Important: Let subprocess use the right binary, not an extra shell layer
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                logging.info(f"Launched: {executable_path}")
+                time.sleep(5)
+
+                # Terminate the process if still running
+                if process.poll() is None:
+                    process.terminate()
+                    logging.info(f"Process terminated after 5 seconds: {executable_path}")
+            except Exception as e:
+                logging.error(f"Failed to launch program: {e}")
+
+            logging.info(f"Launched: {executable_path} (PID: {process.pid})")
+
+        thread = threading.Thread(target=launch_program)
+        thread.start()
+        return "Program launched successfully.", 200
+
     # Use APIResponse module for returning responses or errors.
-    return "This is a success response", 200
+    args = {"path": kwargs.get('path', "")}
+    return run_program_async(args)

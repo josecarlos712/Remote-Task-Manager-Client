@@ -87,7 +87,7 @@ class RemoteClient:
         # Load dynamic routes
         self.endpoints_loader = EndpointsLoader(app=self.app)
         # First, register the root endpoint. All the other endpoints will be registered recursively.
-        response, code = self.endpoints_loader.load_endpoints('api')
+        response, code = self.endpoints_loader.register_endpoint('api')
         # print all the routes
         self.app.logger.info(self.app.url_map)
         return response, code

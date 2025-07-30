@@ -63,4 +63,4 @@ def handler(**kwargs: Dict[str, Any]) -> Response:
     ...
     # TODO: Implement actual endpoint logic here
     # Use APIResponse module for returning responses or errors.
-    #   return APIResponse.SuccessResponse("This is a success response").to_response()
+    return APIResponse.SuccessResponse("This is a success response").to_response()

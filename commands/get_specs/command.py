@@ -147,16 +147,16 @@ def register() -> Tuple[CommandEndpoint | str, int]:
     ]
 
     # Create an instance of the Command class
-    commandenpoint_instance = CommandEndpoint(
-        title=command_title,
-        description=command_description,
-        args_types=command_args_types
+    specs_command = CommandEndpoint(
+        title="Generate System Specs",
+        description="Collects and stores current system specs in a text file.",
+        args_types=[{"output_path": "str", "type": "str", "required": False, "description": "Path to save the system specs file."}]
     )
 
-    return commandenpoint_instance, 200
+    return specs_command, 200
 
 
-def helper_function(**kwargs: Dict[str, Any]) -> Tuple[str, int]:
+def helper_function(**kwargs: Dict[str, Any]) -> Tuple[str | dict, int]:
     """
         Main handler function for API endpoint.
 
@@ -173,6 +173,30 @@ def helper_function(**kwargs: Dict[str, Any]) -> Tuple[str, int]:
         - For errors: APIResponse.ErrorResponse("error message", code).to_response()
         """
     ...
-    # TODO: Implement actual endpoint logic here
+    import platform
+    import psutil
+    import datetime
+
+    def generate_system_specs(args: dict) -> dict:
+        output_path = args.get("output_path", "system_specs.txt")
+
+        specs = {
+            "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "System": platform.system(),
+            "Node Name": platform.node(),
+            "Release": platform.release(),
+            "Version": platform.version(),
+            "Machine": platform.machine(),
+            "Processor": platform.processor(),
+            "CPU Cores": psutil.cpu_count(logical=False),
+            "Logical CPUs": psutil.cpu_count(logical=True),
+            "Total RAM (GB)": round(psutil.virtual_memory().total / (1024 ** 3), 2)
+        }
+
+        with open(output_path, "w") as f:
+            for key, value in specs.items():
+                f.write(f"{key}: {value}\n")
+
+        return specs
     # Use APIResponse module for returning responses or errors.
-    return "This is a success response", 200
+    return generate_system_specs({}), 200

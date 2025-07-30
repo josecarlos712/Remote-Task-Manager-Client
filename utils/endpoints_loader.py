@@ -50,7 +50,12 @@ class EndpointsLoader:
         return f"{__file__} - Endpoints loaded successfully", 200  # Return success message
 
     def register_endpoint(self, api_path: str) -> tuple[str, int]:
-        """ Helper function to import and register an endpoint. """
+        """
+        Registers a single API endpoint by importing the corresponding module and calling its `register()` function.
+        This function handles both single-file endpoints and sub-level endpoints (folders with `endpoint.py`).
+        :param api_path: The relative path to the API endpoint, e.g., 'api/commands/your_command'.
+        :return: tuple[str, int]: A tuple containing a message and an HTTP status code.
+        """
         api_folder = os.path.join(os.path.dirname(__file__), '..')
 
         if not api_path:

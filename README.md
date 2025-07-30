@@ -1,70 +1,86 @@
-### 16-02-25 Modular API Functions v 0.1.1
+# Remote Task Client
 
-Here we set the start of the version counting.
+This project corresponds to the **client** component of a client-server system developed as a Bachelor's Thesis (TFG). It listens for instructions from the server and executes them on the local machine.
 
-v1.x.x - when both server and client works
+## ⚙️ Features
 
-v0.1.x - for client developing
+- Listens for commands from the server on a local network.
+- Executes commands defined as modular plugins.
+- Communication based on JSON.
+- Supports various commands:
+  - Shut down the system.
+  - Display pop-up messages.
+  - Take screenshots.
+  - Download files.
+  - Run local scripts.
 
-v0.2.x - for server developing
+## 🧩 Modular Architecture
 
-v0.3.x - for comunication, requirements and edge cases developing
+Each command is an importable function that can be dynamically registered, allowing easy extension without modifying the main client logic.
 
-v0.1.1 - Modular API (not fully implemented)
+````
 
-Different versions of client and server should work together since the mayor version number still the same (e.g 1.1.3 and 1.2.3 should work together)
+remote-task-client/
+├── commands/           # Individual command modules
+│   ├── **init**.py
+│   └── shutdown.py, popup.py, ...
+├── main.py             # Client main logic
+├── communication.py    # Communication with the server
+└── utils/              # Helper functions
 
-Este commit es anterior a cambiar el parametro de dato de la API cliente para hacerlo genérico.
-Debo añadir checks en la recepcion de datos para comprobar:
- - Existen todos los campos necesarios y los campos no nulificables tienen un valor correcto.
- - Los datos de entrada están bien formateados.
+````
 
-Tras adaptar la function de envio y recepcion de datos a una mas generica.
- - Crear tests para las nuevas funciones de la API.
- - Añadir los endpoint necesarios para cubir las nuevas funciones.
+## 🚀 Running the Project
 
-### 16-02-25 APIResponse and Log
+1. Create a virtual environment and install dependencies:
 
-There is a new APIResponse class. API response sub classes now inherit from the super APIResponse to keep it tidy 
-and organized in the different posible API cases. I will be adding new ones in the future when necessary.
-Current APIResponse classes and inheritances:
+```bash
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -r requirements.txt
+````
 
-    SuccessResponse(APIResponse)
-    ProcessResponse(SuccessResponse)
-    ProgramResponse(SuccessResponse)
-    SystemInfoResponse(SuccessResponse)
-    LogResponse(SuccessResponse)
-    ErrorResponse(APIResponse)
-    NotFoundResponse(ErrorResponse)
-    ValidationErrorResponse(ErrorResponse)
-    InternalErrorResponse(ErrorResponse)
+2. Run the client:
 
-PopUp and test endpoint works.
-Writing the execute program endpoint. It needs an "execute" function that executes the Command class when called.
-Also add another command to kill the process, and list the current processes.
+```bash
+python main.py
+```
 
-### 26-02-25 Dynamic endpoints
+The client will remain active and wait for incoming tasks.
 
-There is a blueprint for dynamic endpoints. The system import the dynamic endpoints on the server start.
+## 🔧 Configuration
 
-### 03-03-25 Endpoint loader and more endpoints
+Edit the `config.py` file or use environment variables to specify:
 
-A dynamic endpoints loader added and more dynamic endpoints were added.
+* Server address
+* Port
+* Authentication token (if applicable)
 
-### 06-03-25 Adding endpoints
-Added system informationg gathering on the configuration file and a get function to access the information.
+## 🛠️ Available Commands
 
-### 07-03-25 Adding endpoints
-System information gathering function checked and working.
-Added distintion between simple and complex endpoints.
-Load and access by __getitem__ function to system_info and configuration.
+| Name        | Description                      |
+| ----------- | -------------------------------- |
+| shutdown    | Shuts down the remote system     |
+| popup       | Displays a popup message         |
+| screenshot  | Takes a screenshot of the client |
+| download    | Downloads files from URLs        |
+| run\_script | Executes a local script          |
 
-### 20-03-25 Recursive endpoint loader
-Remake of the endpoint loader to be recursive and load all the endpoints in the folder 'api'.
-The endpoint blueprint changed to the new methodology.
-Added auth endpoint to the api (login and logout).
-Changed the API Request Tester to use the 'api/tree' endpoint to get all the endpoints.
+## 🚨 Security
 
-*TODO* Add built-in endpoints as dynamic endpoints.
+* The client only responds to authenticated requests.
+* Each command includes parameter validation.
+* Intended for use in trusted LAN environments.
 
-*TODO* Add the command shutdown, download from url, get screenshot, start program, get system information.
+## 📌 Development Status
+
+✅ Modular command system
+✅ Communication with server
+✅ Basic remote control
+❌ Data encryption
+❌ Detailed logging
+❌ Auto-updates
+
+## 📄 License
+
+MIT License

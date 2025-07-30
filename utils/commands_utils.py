@@ -97,7 +97,7 @@ class CommandsLoader:
 
         # Load all the commands from the commands folder. Get all the files inside 'commands' directory and import them.
         commands_folder = os.path.join(os.path.dirname(__file__), '..', 'commands')
-        logger.info(f"{__file__} - Discovering commands in directory: {commands_folder}")
+        logger.debug(f"{__file__} - Discovering commands in directory: {commands_folder}")
         if not os.path.isdir(commands_folder):
             logger.error(f"{__file__} - Commands directory not found at expected path: {commands_folder}")
             return {}  # Not Found
@@ -118,7 +118,7 @@ class CommandsLoader:
                     if hasattr(module, 'register'):
                         command_endpoint, code = module.register()
                         if code == 200:
-                            logger.info(f"{__file__} - Command '{command_name}' registered successfully.")
+                            logger.debug(f"{__file__} - Command '{command_name}' registered successfully.")
                             registered_commands[command_name] = command_endpoint
                         else:
                             logger.error(
@@ -152,7 +152,12 @@ class CommandsLoader:
         command_kargs = kwargs.copy()
         command_kargs.pop('command', None)  # Remove 'command' from kargs to pass only parameters.
 
-        return self.command_endpoints[command](**command_kargs)
+        if command not in self.command_endpoints:
+            logger.error(f"Command '{command}' not found in registered commands.")
+            return APIResponse.ErrorResponse(f"Command '{command}' not found.", 404).to_response()
+        command_endpoint = self.command_endpoints[command]
+
+        return command_endpoint(**command_kargs)
 
     def __getitem__(self, name: str) -> tuple[CommandEndpoint | Dict[str, CommandEndpoint] | str, int]:
         """
