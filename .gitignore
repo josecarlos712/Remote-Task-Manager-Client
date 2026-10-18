@@ -1,9 +1,12 @@
 # Virtual environment
 venv/
 
-# PyCharm
+# PyCharm / IDE
 .idea/
 *.iml
+
+# Cursor agent rules (local)
+.cursor/rules/
 
 # Python cache and test artifacts
 __pycache__/

@@ -4,6 +4,11 @@ Formato de version: `vYY.MMDD.NN`. Las entradas mas recientes van arriba.
 
 > Nota: el historial antiguo sigue en `Updates.md`. A partir de `v26.1019.02` este archivo es la fuente de verdad.
 
+## v26.1019.04 — 19-10-2026
+
+- `.gitignore`: omite `.cursor/rules/`.
+- `openapi.yalm` actualizado con comandos, programas y endpoints de descarga (incl. cancel).
+
 ## v26.1019.03 — 19-10-2026
 
 - `.gitignore`: omite contenido de `downloads/` (excepto `.gitkeep`) y carpeta `build/`.

@@ -1,6 +1,6 @@
 # Remote Task Manager Client
 
-**Version:** v26.1019.03
+**Version:** v26.1019.04
 
 Agente Flask que se instala en cada PC y ejecuta comandos enviados desde el servidor Django.
 
