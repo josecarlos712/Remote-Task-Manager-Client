@@ -1,0 +1,17 @@
+[
+  {
+    "match": "civitai.com",
+    "dir": "downloads",
+    "description": "Descargas Civitai (ruta relativa a la carpeta del cliente, o absoluta)"
+  },
+  {
+    "match": "civitai.red",
+    "dir": "downloads",
+    "description": "Descargas Civitai (ruta relativa a la carpeta del cliente, o absoluta)"
+  },
+  {
+    "match": "huggingface.co",
+    "dir": "downloads",
+    "description": "Descargas Hugging Face (ruta relativa a la carpeta del cliente, o absoluta)"
+  }
+]

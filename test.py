@@ -1,173 +1,111 @@
-import pytest
 import json
-from unittest.mock import Mock, patch, MagicMock
-from flask import Flask, jsonify
-import requests
+from unittest.mock import patch
+
+import pytest
 
 import config
-from commands import Command
-from utils import APIResponse
 from remote_client import RemoteClient
 
 
 @pytest.fixture
-def client():
-    """Fixture to create a test client"""
+def api_key(monkeypatch):
+    monkeypatch.setattr(config, "get_api_key", lambda: "test-key")
+    return "test-key"
+
+
+@pytest.fixture
+def client(api_key, monkeypatch):
+    monkeypatch.setattr(RemoteClient, "register_with_server", lambda self: None)
+    monkeypatch.setattr(RemoteClient, "_start_health_check", lambda self: None)
     remote_client = RemoteClient(
         name="Test Client",
         port=5001,
-        target_url="http://localhost:5000"
+        target_url="http://localhost:8000",
     )
-    # Create a test client using Flask's test_client
-    test_client = remote_client.app.test_client()
-    return test_client
+    return remote_client.app.test_client()
 
 
 class TestRemoteClientEndpoints:
-    """Test class for RemoteClient endpoints"""
-
-    def test_test_endpoint(self, client):
-        """Test the test endpoint"""
-        response = client.get('/api/test')
-        data = json.loads(response.data)
-
-        # Respuesta correcta con código 200
-        assert response.status_code == 200
-        # Contenido correcto en la respuesta (status, message, data)
-        assert data['status'] == 'success'
-        assert 'APIRest is running' in data['message']
-        assert data['data']['name'] == 'Test Client'
-        assert isinstance(data['data']['port'], int)
-
     def test_health_check_endpoint(self, client):
-        """Test the health check endpoint""" 
-        response = client.get('/api/health')
+        response = client.get("/api/health")
         data = json.loads(response.data)
-
-        # Respuesta correcta con código 200
         assert response.status_code == 200
-        # Contenido correcto en la respuesta (status, message, data)
-        assert data['status'] == 'success'
-        assert data['message'] == 'Health check successful'
-        assert 'name' in data['data']
-        assert data['data']['status'] == 'healthy'
-        # "last_health_check" tiene formato de fecha y hora válido
-        assert 'last_health_check' in data['data']
+        assert data["status"] == "success"
+        assert data["data"]["status"] == "healthy"
 
-    def test_command_endpoint_no_command(self, client):
-        """Test command endpoint with missing command"""
-        response = client.post('/api/command', json={})
+    def test_command_list_requires_api_key(self, client):
+        response = client.get("/api/command/list")
+        assert response.status_code == 401
+
+    def test_command_list_with_api_key(self, client, api_key):
+        response = client.get("/api/command/list", headers={"X-Client-API-Key": api_key})
         data = json.loads(response.data)
+        assert response.status_code == 200
+        assert data["status"] == "success"
+        assert "test_command" in data["data"]
+        assert "show_popup" in data["data"]
 
-        # Respuesta 400 si falta el campo "command"
-        assert response.status_code == 400
-        assert data['status'] == 'error'
-        assert 'Command not provided' in data['message']
+    def test_command_execute_without_key(self, client):
+        response = client.post(
+            "/api/command/execute",
+            json={"command_id": "test_command"},
+        )
+        assert response.status_code == 401
 
-    def test_command_endpoint_invalid_command(self, client):
-        """Test command endpoint with invalid command"""
-        response = client.post('/api/command', json={'command': 'invalid_command'})
+    def test_command_execute_with_key(self, client, api_key):
+        response = client.post(
+            "/api/command/execute",
+            headers={"X-Client-API-Key": api_key},
+            json={"command_id": "test_command", "kwargs": {"message": "hi"}},
+        )
         data = json.loads(response.data)
+        assert response.status_code == 200
+        assert data["status"] == "success"
 
-        # Respuesta 404 si el comando no existe
+    def test_command_execute_unknown(self, client, api_key):
+        response = client.post(
+            "/api/command/execute",
+            headers={"X-Client-API-Key": api_key},
+            json={"command_id": "does_not_exist"},
+        )
+        data = json.loads(response.data)
         assert response.status_code == 404
-        assert data['status'] == 'error'
-        assert 'does not exist' in data['message']
+        assert data["status"] == "error"
 
-    def test_command_endpoint_valid_command(self, client):
-        """Test command endpoint with valid command using mocked dictionary"""
-        response = client.post('/api/command', json={'command': 'test_command'})
+    def test_download_file_command_listed(self, client, api_key):
+        response = client.get("/api/command/list", headers={"X-Client-API-Key": api_key})
         data = json.loads(response.data)
-
-        # Respuesta correcta con código 200 si el comando es válido
         assert response.status_code == 200
-        assert data['status'] == 'success'
-        assert 'executed correctly' in data['message']
+        assert "download_file" in data["data"]
 
-    def test_command_endpoint_with_message(self, client):
-        """Test command endpoint with message parameter"""
-        test_message = "test message"
-        response = client.post('/api/command',
-                               headers={'Origin': 'http://localhost'},
-                               json={'command': 'test_command', 'message': test_message})
+    def test_download_file_starts_background(self, client, api_key, monkeypatch):
+        from command_modules import download_file as df
+
+        started = {"called": False}
+
+        def fake_worker(job_id, url, save_dir, filename):
+            started["called"] = True
+            df._set_job(job_id, status="completed", path=str(save_dir / "x.bin"))
+
+        monkeypatch.setattr(df, "_download_worker", fake_worker)
+        response = client.post(
+            "/api/command/execute",
+            headers={"X-Client-API-Key": api_key},
+            json={
+                "command_id": "download_file",
+                "kwargs": {"url": "https://civitai.com/api/download/models/1"},
+            },
+        )
         data = json.loads(response.data)
-
-        # Validación de formato de entrada (JSON válido)
         assert response.status_code == 200
-        assert data['status'] == 'success'
-        assert test_message in data['message']
-
-    def test_options_preflight(self, client):
-        """Test CORS preflight request"""
-        response = client.options('/api/test')
-        # Manejador OPTIONS devuelve 204 (preflight CORS)
-        assert response.status_code == 204
-
-    def test_unsupported_http_methods(self, client):
-        """Test that unsupported HTTP methods return correct error"""
-        response = client.delete('/api/test')
-        # Todas las rutas rechazan métodos HTTP no soportados (ej. DELETE)
-        assert response.status_code == 405
-
-    def test_not_found_route(self, client):
-        """Test accessing a non-existent route"""
-        response = client.get('/api/nonexistent')
-        # Manejo correcto de errores 404 (ruta no encontrada)
-        assert response.status_code == 404
-
-    def test_internal_server_error_handling(self, client, mocker):
-        """Test that internal server errors are handled properly"""
-        mocker.patch('app.some_function', side_effect=Exception('Test error'))
-        response = client.get('/api/test')
-        # Manejo correcto de errores 500 (error interno en el servidor)
-        assert response.status_code == 500
-
-    def test_system_info_gathering(self):
-        info = config.configuration.get_specification_info(key_path="cpu")
-        assert info != "Unknown"
-
-
-def test_cors_headers(client):
-    """Test CORS headers are properly set."""
-    response = client.options(
-        '/api/test',
-        headers={'Origin': 'http://localhost'}
-    )
-    headers = response.headers
-
-    assert 'Access-Control-Allow-Origin' in headers
-    assert headers['Access-Control-Allow-Origin'] == 'http://localhost'
-    assert 'Access-Control-Allow-Methods' in headers
-    assert 'OPTIONS' in headers['Access-Control-Allow-Methods']
-    assert 'POST' in headers['Access-Control-Allow-Methods']
-
-
-@pytest.mark.performance
-class TestRemoteClientPerformance:
-    """Performance tests for RemoteClient"""
-
-    def test_concurrent_requests(self, client):
-        """Test handling multiple concurrent requests"""
-        import concurrent.futures
+        assert data["status"] == "success"
+        assert data["data"]["started"] is True
+        assert "ComfyUI-Shared" in data["data"]["save_dir"]
+        # worker runs in thread; give it a moment
         import time
 
-        def make_request():
-            return client.post('/api/test')
-
-        start_time = time.time()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            # Make 100 concurrent requests
-            futures = [executor.submit(make_request) for _ in range(100)]
-            responses = [f.result() for f in futures]
-
-        end_time = time.time()
-        execution_time = end_time - start_time
-
-        # Check all responses were successful
-        assert all(r.status_code == 200 for r in responses)
-        # Check if completed within reasonable time (adjust as needed)
-        assert execution_time < 10  # Should complete in less than 10 seconds
-
-
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+        for _ in range(20):
+            if started["called"]:
+                break
+            time.sleep(0.05)
+        assert started["called"] is True

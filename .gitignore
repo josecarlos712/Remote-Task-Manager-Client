@@ -17,3 +17,19 @@ logs/
 *.log.*
 *.log
 .env
+
+# Private user secrets (API keys, tokens, etc.) — never commit
+sensible/
+
+# Large download payloads (keep folder via .gitkeep)
+downloads/*
+!downloads/.gitkeep
+
+# Local machine config (templates: *.example.json are tracked)
+config/download_routes.json
+config/programs.json
+
+# Portable / PyInstaller output (publish separately)
+build/
+dist/
+*.spec

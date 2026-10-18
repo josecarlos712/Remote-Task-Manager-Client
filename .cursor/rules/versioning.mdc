@@ -1,0 +1,33 @@
+---
+description: Avanzar version del cliente y actualizar CHANGELOG tras cambios
+alwaysApply: true
+---
+
+# Versionado Remote Task Manager (cliente)
+
+Tras **cualquier cambio funcional** en este repo (comandos, endpoints, config, packaging, icono, scripts de arranque), **avanza la version** antes de dar por terminada la tarea.
+
+## Formato
+
+`vYY.MMDD.NN` (ejemplo: `v26.1019.02`)
+
+- `YY` = anio (2 digitos)
+- `MMDD` = mes y dia de la release/bump
+- `NN` = contador del dia (`01`, `02`, ...)
+
+Si el dia cambia, reinicia `NN` en `01`. Si ya hubo bumps el mismo dia, incrementa `NN`.
+
+## Archivos a actualizar (todos)
+
+1. `VERSION` — solo la linea de version actual
+2. `CHANGELOG.md` — entrada nueva arriba con resumen de caracteristicas/cambios
+3. Referencias visibles: `README.md`, `README-ES.md`
+4. El historial antiguo en `Updates.md` queda como archivo legacy; **las entradas nuevas van solo a `CHANGELOG.md`**
+
+## Changelog
+
+En `CHANGELOG.md`, cada version debe listar en bullets **que hay de nuevo / que se arreglo**, en espanol, breve y concreto. No hace falta commit git solo por el bump salvo que el usuario lo pida.
+
+## Servidor
+
+Si el cambio tambien toca el repo servidor, aplica la misma regla alli. Servidor y cliente pueden compartir el mismo numero si el trabajo es conjunto.

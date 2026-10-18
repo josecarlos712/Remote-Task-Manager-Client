@@ -1,70 +1,73 @@
-Remote Task Manager (RTM)
-Remote Task Manager es un ecosistema modular diseñado para centralizar el control de múltiples dispositivos en una red local. El proyecto elimina la barrera técnica que supone gestionar diversos sistemas operativos y dispositivos de forma individual, transformando operaciones complejas en acciones directas desde una interfaz web.
+# Remote Task Manager Client
 
-## ✨ Características Principales
-- Abstracción de Comandos: Ejecuta operaciones de terminal mediante botones intuitivos en la interfaz.
+**Version:** v26.1019.03
 
-- Arquitectura Modular: Basado en un sistema de blueprints, permite añadir nuevas funcionalidades sin modificar el núcleo del código.
+Agente Flask que se instala en cada PC y ejecuta comandos enviados desde el servidor Django.
 
-- Interfaz Responsive: Control total desde navegadores de escritorio o dispositivos móviles.
+## Requisitos
 
-- Seguridad y Control: Gestión de acceso mediante API Keys y asignación de dispositivos a propietarios específicos.
-
-- Multidispositivo: Capacidad para gestionar PCs, servidores y otros dispositivos con Python instalado.
-
-## 🖼️ Capturas de Pantalla
-<p align="center">
-<img src="screenshots/login.png" width="32%" alt="Login">
-<img src="screenshots/dashboard.png" width="32%" alt="Dashboard">
-<img src="screenshots/acciones.png" width="32%" alt="Acciones Remotas">
-</p>
-
-## 🛠️ Posibilidades del Sistema
-El sistema es extensible por diseño, permitiendo implementar:
-
-- Control de Energía: Apagado, reinicio y suspensión.
-
-- Monitorización: Capturas de pantalla en tiempo real y estado del sistema.
-
-- Gestión de Archivos: Transferencia de archivos entre cliente y servidor.
-
-- Mensajería: Sistema de actividades y notificaciones entre usuarios.
-
-## 🏗️ Estructura del Proyecto
-El proyecto se divide en dos componentes independientes:
-
-- Servidor (Django): El panel de control central que gestiona la base de datos, los usuarios y la lógica de negocio. (Este repositorio)
-
-- Cliente (Python/Flask): Aplicación ligera que reside en los dispositivos remotos y ejecuta las órdenes recibidas. (https://github.com/josecarlos712/Remote-Task-Manager-Client)
-
-Entiendo perfectamente. El formato anterior era muy plano y costaba distinguir los pasos. Para un README de calidad, es mejor usar **subtítulos claros**, **listas con iconos** y **bloques de código bien etiquetados**.
-
-Aquí tienes tres opciones de reformateo para que elijas la que mejor encaje con tu estilo:
-
-### Opción 1: Estilo Limpio y Jerárquico (Recomendada)
-Esta opción separa claramente los prerrequisitos de los pasos de ejecución, usando negritas para resaltar la acción principal.
-
----
-
-## ⚙️ Instalación y Configuración
-
-> **Nota:** Se requiere Python 3.10+ y visibilidad de red local.
-
-#### 🖥️ **Servidor**
-```bash
-# Instalación y arranque del orquestador
-cd Remote-Task-Server && pip install -r requirements.txt
-python manage.py migrate && python manage.py runserver
+```bat
+pip install -r requirements.txt
 ```
 
-#### 🔌 **Cliente**
-```bash
-# Instalación y conexión del nodo
-cd Remote-Task-Client && pip install -r requirements.txt
-python main.py
+## Configuración
+
+Edita `configuration.ini`:
+
+- `SERVER_URL` — URL del servidor Django (ej. `http://192.168.0.3:8000`)
+- `REGISTER_TOKEN` — mismo valor que `CLIENT_REGISTER_TOKEN` del servidor
+- `OWNER_USERNAME` — usuario Django propietario del cliente
+- `PORT` — puerto local del agente (default `5000`)
+- `API_KEY` — opcional; si está vacío, el servidor genera una al registrar
+
+## Arranque
+
+```bat
+scripts\start_client.bat
 ```
 
----
+O: `python main.py`
 
-📄 Créditos
-Proyecto desarrollado por José Carlos Crespo Falcón como Trabajo Fin de Grado en Ingeniería Informática (Ingeniería de Computadores), Universidad de Sevilla, curso 2024/25.
+Al iniciar, el cliente:
+
+1. Se registra en `POST /api/clients/register`
+2. Expone `GET /api/health`, `GET /api/command/list`, `POST /api/command/execute`
+3. Envía heartbeat periódico a `POST /api/clients/health`
+
+## Autenticación
+
+Las rutas de comandos exigen el header `X-Client-API-Key`. El servidor lo envía al ejecutar desde la web.
+
+## Comandos modulares
+
+Carpeta `command_modules/`. Cada archivo define:
+
+- `COMMAND_ID`, `TITLE`, `DESCRIPTION`, `ARGS`
+- `handler(**kwargs) -> (result, http_code)`
+
+Comandos incluidos: `test_command`, `show_popup`, `shutdown`, `screenshot`, `list_processes`, `lock_workstation`, `open_url`, `execute_program`.
+
+Endpoints extra (sin tocar el núcleo): carpeta `endpoints/` + `blueprint_endpoint.py`.
+
+## Autostart en Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_autostart_task.ps1
+```
+
+## Logs
+
+`logs/system.log`
+
+## Tests
+
+```bat
+pytest test.py -q
+```
+
+## Flujo de verificación
+
+1. Arranca el servidor Django
+2. Arranca este cliente
+3. Revisa logs de registro OK
+4. En la web: login → comandos → ejecuta `show_popup` o `test_command`

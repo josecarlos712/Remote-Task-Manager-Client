@@ -1,0 +1,11 @@
+[
+  {
+    "name": "example_app",
+    "title": "Example App",
+    "description": "Copia este archivo a programs.json y adapta las rutas de este PC",
+    "path": "C:\\Path\\To\\app.exe",
+    "args": "",
+    "work_dir": "",
+    "available": true
+  }
+]

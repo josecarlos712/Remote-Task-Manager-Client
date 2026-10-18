@@ -1,6 +1,22 @@
 import os
+import sys
 import importlib
 from config import logger
+
+
+def _endpoints_folder() -> str:
+    """Prefer endpoints next to the exe; fall back to bundle or source tree."""
+    candidates = []
+    if getattr(sys, "frozen", False):
+        candidates.append(os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "endpoints"))
+        if hasattr(sys, "_MEIPASS"):
+            candidates.append(os.path.join(sys._MEIPASS, "endpoints"))
+    candidates.append(os.path.join(os.path.dirname(__file__), "..", "endpoints"))
+    for path in candidates:
+        path = os.path.normpath(path)
+        if os.path.isdir(path):
+            return path
+    return os.path.normpath(candidates[-1])
 
 
 def load_endpoints(app):
@@ -22,7 +38,10 @@ def load_endpoints(app):
     """
 
     loaded_modules = {}  # Stores successfully loaded modules
-    endpoint_folder = os.path.join(os.path.dirname(__file__), '..', 'endpoints')
+    endpoint_folder = _endpoints_folder()
+    if not os.path.isdir(endpoint_folder):
+        logger.warning(f"Endpoints folder not found: {endpoint_folder}")
+        return
 
     for item in os.listdir(endpoint_folder):
         excluded_files = ['__init__.py', 'blueprint_endpoint.py']
@@ -39,7 +58,7 @@ def load_endpoints(app):
             endpoint_file = os.path.join(full_path, 'endpoint.py')
 
             if not os.path.exists(endpoint_file):
-                logger.warn(f"Skipping '{module_name}': 'endpoint.py' not found in folder.")
+                logger.warning(f"Skipping '{module_name}': 'endpoint.py' not found in folder.")
                 continue  # Required file not found, skipping
 
             module_path = f'endpoints.{module_name}.endpoint'
@@ -59,10 +78,10 @@ def load_endpoints(app):
                     else:
                         raise ImportError(f"Failed to register endpoint '{module_name}'.")
                 except Exception as e:
-                    logger.warn(f"Failed on 'register()' function for '{module_name}'. - {e}")
+                    logger.warning(f"Failed on 'register()' function for '{module_name}'. - {e}")
 
         except Exception as e:
-            logger.warn(f"Failed to load module '{module_name}' - {e}")
+            logger.warning(f"Failed to load module '{module_name}' - {e}")
 
         if loaded_modules[module_name]:
             logger.debug(f"Loaded module '{module_name}' - OK")

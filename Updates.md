@@ -1,3 +1,9 @@
+> Historial legacy. Las versiones nuevas se documentan en `CHANGELOG.md` (version actual en `VERSION`).
+
+### 19-10-26 Remote Task Manager v26.1019.01
+
+Bump de version tras cambios mayores: i18n ES/EN, programas con PID/iniciar-detener (.exe/.bat), pagina dedicada de Programas/Comandos/Actividades, Acerca de actualizado, sync de lista de programas y mejoras de API key / agente.
+
 ### 16-02-25 Modular API Functions v 0.1.1
 
 Here we set the start of the version counting.

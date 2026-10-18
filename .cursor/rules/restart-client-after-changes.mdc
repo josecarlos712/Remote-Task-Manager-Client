@@ -1,0 +1,31 @@
+---
+description: Reiniciar el agente cliente automaticamente tras cambios que lo requieran
+alwaysApply: true
+---
+
+# Reinicio del cliente Remote Task Manager
+
+Cuando modifiques codigo del cliente que solo se carga al arrancar, **reinicia el agente tu mismo**. No pidas al usuario que lo reinicie.
+
+## Consola visible + disposicion (obligatorio)
+
+1. **No** ejecutar el cliente como job interno del terminal de Cursor.
+2. Usar el script de reinicio visible (libera puerto 5000, abre `cmd`, coloca ventanas):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "D:\JoseCarlos\Programacion\Python\Cursor\Remote-Task-Manager-Client\scripts\restart_client_visible.ps1"
+```
+
+3. Tras el arranque, las consolas deben quedar en el **monitor secundario** (no PrimaryScreen; cables invertidos):
+   - **Izquierda (50%)**: servidor (`RTM-SERVER` / `start_server_https`)
+   - **Derecha (50%)**: cliente (`RTM-CLIENT` / `start_client.bat`)
+
+Si solo reinicias el cliente y el servidor ya esta abierto, el script `arrange_rtm_consoles.ps1` reacomoda ambas.
+
+Para solo recolocar sin reiniciar:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "D:\JoseCarlos\Programacion\Python\Cursor\Remote-Task-Manager-Client\scripts\arrange_rtm_consoles.ps1"
+```
+
+No hace falta reiniciar por cambios solo en la UI Django del servidor, salvo que tambien hayas tocado el cliente.

@@ -1,0 +1,33 @@
+Remote Task Manager Client (paquete portable)
+============================================
+
+Contenido
+---------
+- RemoteTaskManagerClient.exe  -> ejecutable del agente
+- configuration.ini            -> configura el servidor y tokens
+- config/                      -> programs.json, download_routes.json
+                                 (plantillas *.example.json incluidas)
+- command_modules/             -> comandos (ampliable)
+- endpoints/                   -> endpoints API locales (ampliable)
+- sensible/                    -> secretos privados (NO compartir)
+- downloads/                   -> archivos descargados
+- logs/                        -> registros
+
+Primer uso
+----------
+1. Edita configuration.ini:
+   - SERVER_URL = URL del servidor Django (ej. http://192.168.0.10:8000)
+   - REGISTER_TOKEN = el mismo CLIENT_REGISTER_TOKEN del servidor
+   - OWNER_USERNAME = tu usuario del panel web
+2. (Opcional) Copia sensible/secrets.example.json a sensible/secrets.json
+   y rellena civitai_api_key si usas descargas de Civitai.
+3. (Opcional) Ajusta config/download_routes.json y config/programs.json
+   (partiendo de los *.example.json si haces una instalacion nueva).
+4. Ejecuta RemoteTaskManagerClient.exe (deja la ventana abierta).
+5. En el panel web: Configuracion -> API Key del cliente si hace falta.
+
+Notas
+-----
+- Copia TODA la carpeta RTM-Client; no solo el .exe.
+- Firewall de Windows puede pedir permiso para el puerto (por defecto 5000).
+- No subas la carpeta sensible/ a internet ni a GitHub.

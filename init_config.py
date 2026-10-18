@@ -21,6 +21,7 @@ class Configuration:
         self.check_files()
 
     def logging_configuration(self) -> logging:
+        os.makedirs("logs", exist_ok=True)
         log_file = "logs/system.log"
         logging.basicConfig(
             level=logging.DEBUG,
@@ -185,9 +186,9 @@ class Configuration:
 
     def check_files(self):
         """Check for important directories and files inside the proyect."""
-        #Checking downloads
-        is_absolute_path = bool(re.match(r"^[A-Za-z]:[\\/]", self._settings.get("path_downloads")))
-        downloads_folder = os.path.join(os.getcwd(), "downloads") if is_absolute_path else self._settings.get("path_downloads")
+        path_downloads = self._settings.get("path_downloads") or "downloads"
+        is_absolute_path = bool(re.match(r"^[A-Za-z]:[\\/]", str(path_downloads)))
+        downloads_folder = str(path_downloads) if is_absolute_path else os.path.join(os.getcwd(), str(path_downloads))
         try:
             os.makedirs(downloads_folder, exist_ok=True)
         except Exception as e:
@@ -202,3 +203,33 @@ class Configuration:
             return self._system_info.get(key, default if default else "Unknown")
         else:
             self.logging.log(logging.ERROR, f"{key} is not in suported dicts on Configuration.")
+
+    def set_and_persist(self, key: str, value) -> None:
+        """Update an in-memory setting and rewrite it in configuration.ini."""
+        key_l = str(key).lower()
+        self._settings[key_l] = value
+        path = self.config_path
+        if not os.path.exists(path):
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(f"{key_l.upper()} = {value}\n")
+            return
+
+        lines = []
+        replaced = False
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#") and "=" in stripped:
+                    k, _ = map(str.strip, stripped.split("=", 1))
+                    if k.lower() == key_l:
+                        # Keep original key casing from file when possible
+                        lines.append(f"{k} = {value}\n")
+                        replaced = True
+                        continue
+                lines.append(line if line.endswith("\n") else line + "\n")
+        if not replaced:
+            if lines and not lines[-1].endswith("\n"):
+                lines[-1] = lines[-1] + "\n"
+            lines.append(f"\n{key_l.upper()} = {value}\n")
+        with open(path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
